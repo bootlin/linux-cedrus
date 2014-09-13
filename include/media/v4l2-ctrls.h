@@ -42,6 +42,11 @@ struct poll_table_struct;
  * @p_u32:			Pointer to a 32-bit unsigned value.
  * @p_char:			Pointer to a string.
  * @p_mpeg2_slice_params:	Pointer to a MPEG2 slice parameters structure.
+ * @p_h264_sps:			Pointer to a struct v4l2_ctrl_h264_sps.
+ * @p_h264_pps:			Pointer to a struct v4l2_ctrl_h264_pps.
+ * @p_h264_scal_mtrx:		Pointer to a struct v4l2_ctrl_h264_scaling_matrix.
+ * @p_h264_slice_param:		Pointer to a struct v4l2_ctrl_h264_slice_param.
+ * @p_h264_decode_param:	Pointer to a struct v4l2_ctrl_h264_decode_param.
  * @p:				Pointer to a compound value.
  */
 union v4l2_ctrl_ptr {
@@ -52,6 +57,11 @@ union v4l2_ctrl_ptr {
 	u32 *p_u32;
 	char *p_char;
 	struct v4l2_ctrl_mpeg2_slice_params *p_mpeg2_slice_params;
+	struct v4l2_ctrl_h264_sps *p_h264_sps;
+	struct v4l2_ctrl_h264_pps *p_h264_pps;
+	struct v4l2_ctrl_h264_scaling_matrix *p_h264_scal_mtrx;
+	struct v4l2_ctrl_h264_slice_param *p_h264_slice_param;
+	struct v4l2_ctrl_h264_decode_param *p_h264_decode_param;
 	void *p;
 };
 
