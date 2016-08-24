@@ -1,0 +1,44 @@
+Device-Tree bindings for SUNXI video engine found in sunXi SoC family
+
+Required properties:
+- compatible	    : "allwinner,sun4i-a10-video-engine";
+- memory-region     : DMA pool for buffers allocation;
+- clocks	    : list of clock specifiers, corresponding to
+		      entries in clock-names property;
+- clock-names	    : should contain "ahb", "mod" and "ram" entries;
+- resets	    : phandle for reset;
+- interrupts	    : should contain VE interrupt number;
+- reg		    : should contain register base and length of VE.
+
+Example:
+
+reserved-memory {
+	#address-cells = <1>;
+	#size-cells = <1>;
+	ranges;
+
+	ve_reserved: cma {
+		compatible = "shared-dma-pool";
+		reg = <0x43d00000 0x9000000>;
+		no-map;
+		linux,cma-default;
+	};
+};
+
+video-engine {
+	compatible = "allwinner,sun4i-a10-video-engine";
+	memory-region = <&ve_reserved>;
+
+	clocks = <&ahb_gates 32>, <&ccu CLK_VE>,
+		 <&dram_gates 0>;
+	clock-names = "ahb", "mod", "ram";
+
+	assigned-clocks = <&ccu CLK_VE>;
+	assigned-clock-rates = <320000000>;
+
+	resets = <&ccu RST_VE>;
+
+	interrupts = <53>;
+
+	reg = <0x01c0e000 4096>;
+};
