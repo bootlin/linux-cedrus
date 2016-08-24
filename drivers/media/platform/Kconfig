@@ -488,6 +488,20 @@ config VIDEO_TI_VPE
 	  Support for the TI VPE(Video Processing Engine) block
 	  found on DRA7XX SoC.
 
+config VIDEO_SUNXI_CEDRUS
+	tristate "Sunxi CEDRUS VPU driver"
+	depends on VIDEO_DEV && VIDEO_V4L2
+	depends on ARCH_SUNXI
+	depends on HAS_DMA
+	select VIDEOBUF2_DMA_CONTIG
+	select MEDIA_REQUEST_API
+	select V4L2_MEM2MEM_DEV
+	---help---
+	  Support for the Video Engine found in Allwinner SoCs.
+
+	  To compile this driver as a module, choose M here: the module
+	  will be called sunxi-cedrus.
+
 config VIDEO_TI_VPE_DEBUG
 	bool "VPE debug messages"
 	depends on VIDEO_TI_VPE
