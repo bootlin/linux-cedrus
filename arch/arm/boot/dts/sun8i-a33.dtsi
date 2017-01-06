@@ -181,6 +181,21 @@
 		reg = <0x40000000 0x80000000>;
 	};
 
+	reserved-memory {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+
+		ve_reserved: cma {
+			compatible = "shared-dma-pool";
+			no-map;
+			size = <0x4000000>;
+			alignment = <0x2000>;
+			alloc-ranges = <0x40000000 0x10000000>;
+			linux,cma-default;
+		};
+	};
+
 	sound: sound {
 		compatible = "simple-audio-card";
 		simple-audio-card,name = "sun8i-a33-audio";
@@ -204,6 +219,11 @@
 	};
 
 	soc@1c00000 {
+		syscon: system-controller@01c00000 {
+			compatible = "allwinner,sun8i-a33-syscon", "syscon";
+			reg = <0x01c00000 0x1000>;
+		};
+
 		tcon0: lcd-controller@1c0c000 {
 			compatible = "allwinner,sun8i-a33-tcon";
 			reg = <0x01c0c000 0x1000>;
@@ -238,6 +258,25 @@
 					reg = <1>;
 				};
 			};
+		};
+
+		ve: video-engine@01c0e000 {
+			compatible = "allwinner,sun4i-a10-video-engine";
+			memory-region = <&ve_reserved>;
+			syscon = <&syscon>;
+
+			clocks = <&ccu CLK_BUS_VE>, <&ccu CLK_VE>,
+				 <&ccu CLK_DRAM_VE>;
+			clock-names = "ahb", "mod", "ram";
+
+			assigned-clocks = <&ccu CLK_VE>;
+			assigned-clock-rates = <320000000>;
+
+			resets = <&ccu RST_BUS_VE>;
+
+			interrupts = <GIC_SPI 58 IRQ_TYPE_LEVEL_HIGH>;
+
+			reg = <0x01c0e000 0x1000>;
 		};
 
 		crypto: crypto-engine@1c15000 {
