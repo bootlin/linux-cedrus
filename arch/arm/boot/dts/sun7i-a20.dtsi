@@ -53,6 +53,35 @@
 / {
 	interrupt-parent = <&gic>;
 
+	reserved-memory {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+
+		/*
+		 * MUST TO BE IN THE LOWER 256MB of RAM for the VE!
+		 * Src: http://linux-sunxi.org/Sunxi-cedrus "A
+		 * limitation of the Allwinner's VPU is the need for
+		 * buffers in the lower 256M of RAM. In order to
+		 * allocate large sets of data in this area,
+		 * "sunxi-cedrus" reserves a DMA pool that is then
+		 * used by videobuf's dma-contig backend() to allocate
+		 * input and output buffers easily and integrate that
+		 * with the v4l QBUF/DQBUF APIs."
+		 *
+		 * The lower limit is 0x41000000 but the kernel has to
+		 * be moved somewhere else in order to use this
+		 * region.
+		 */
+
+		ve_reserved: cma {
+			compatible = "shared-dma-pool";
+			reg = <0x41000000 0x9000000>;
+			no-map;
+			linux,cma-default;
+		};
+	};
+
 	aliases {
 		ethernet0 = &gmac;
 	};
@@ -449,6 +478,24 @@
 					};
 				};
 			};
+		};
+
+		ve: video-engine@01c0e000 {
+			compatible = "allwinner,sun4i-a10-video-engine";
+			memory-region = <&ve_reserved>;
+
+			clocks = <&ccu CLK_AHB_VE>, <&ccu CLK_VE>,
+				 <&ccu CLK_DRAM_VE>;
+			clock-names = "ahb", "mod", "ram";
+
+			assigned-clocks = <&ccu CLK_VE>;
+			assigned-clock-rates = <320000000>;
+
+			resets = <&ccu RST_VE>;
+
+			interrupts = <GIC_SPI 53 IRQ_TYPE_LEVEL_HIGH>;
+
+			reg = <0x01c0e000 0x1000>;
 		};
 
 		mmc0: mmc@1c0f000 {
