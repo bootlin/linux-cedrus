@@ -2772,6 +2772,11 @@ int v4l2_ctrl_request_clone(struct v4l2_ctrl_handler *hdl,
 		if (filter && !filter(ctrl))
 			continue;
 		err = handler_new_ref(hdl, ctrl, &new_ref, false);
+		if (err) {
+			printk("%s: handler_new_ref on control %x (%s) returned %d\n", __func__, ctrl->id, ctrl->name, err);
+			err = 0;
+			continue;
+		}
 		if (err)
 			break;
 		if (from->is_request)
