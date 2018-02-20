@@ -27,6 +27,7 @@
 #include <media/v4l2-ctrls.h>
 #include <media/v4l2-event.h>
 #include <media/v4l2-dev.h>
+#include <media/v4l2-request.h>
 
 #define has_op(master, op) \
 	(master->ops && master->ops->op)
@@ -2959,9 +2960,44 @@ static int class_check(struct v4l2_ctrl_handler *hdl, u32 which)
 }
 
 
+#if IS_ENABLED(CONFIG_MEDIA_REQUEST_API)
+static struct media_request *
+get_handler_for_request(struct v4l2_fh *fh, struct v4l2_ext_controls *cs,
+			struct v4l2_ctrl_handler **hdl)
+{
+	struct media_request *req;
+	struct v4l2_request_entity_data *data;
+
+	if (!fh || !fh->entity)
+		return ERR_PTR(-EINVAL);
+
+	req = media_request_get_from_fd(cs->request_fd);
+	if (!req)
+		return ERR_PTR(-EINVAL);
+
+	data = to_v4l2_entity_data(media_request_get_entity_data(req,
+								 fh->entity));
+	if (IS_ERR(data)) {
+		media_request_put(req);
+		return (void *)data;
+	}
+
+	*hdl = &data->ctrls;
+
+	return req;
+}
+#else
+static struct media_request *
+get_handler_for_request(struct v4l2_fh *fh, struct v4l2_ext_controls *cs,
+			struct v4l2_ctrl_handler **hdl)
+{
+	return ERR_PTR(-ENOTSUPP);
+}
+#endif
 
 /* Get extended controls. Allocates the helpers array if needed. */
-int v4l2_g_ext_ctrls(struct v4l2_ctrl_handler *hdl, struct v4l2_ext_controls *cs)
+int __v4l2_g_ext_ctrls(struct v4l2_ctrl_handler *hdl,
+		       struct v4l2_ext_controls *cs)
 {
 	struct v4l2_ctrl_helper helper[4];
 	struct v4l2_ctrl_helper *helpers = helper;
@@ -3040,6 +3076,30 @@ int v4l2_g_ext_ctrls(struct v4l2_ctrl_handler *hdl, struct v4l2_ext_controls *cs
 
 	if (cs->count > ARRAY_SIZE(helper))
 		kvfree(helpers);
+	return ret;
+}
+
+int v4l2_g_ext_ctrls(struct v4l2_fh *fh, struct v4l2_ctrl_handler *hdl,
+		     struct v4l2_ext_controls *cs)
+{
+	struct media_request *req = NULL;
+	int ret;
+
+	if (cs->request_fd > 0) {
+		req = get_handler_for_request(fh, cs, &hdl);
+		if (IS_ERR(req))
+			return PTR_ERR(req);
+
+		 media_request_lock(req);
+	}
+
+	ret = __v4l2_g_ext_ctrls(hdl, cs);
+
+	if (req) {
+		media_request_unlock(req);
+		media_request_put(req);
+	}
+
 	return ret;
 }
 EXPORT_SYMBOL(v4l2_g_ext_ctrls);
@@ -3217,9 +3277,9 @@ static void update_from_auto_cluster(struct v4l2_ctrl *master)
 }
 
 /* Try or try-and-set controls */
-static int try_set_ext_ctrls(struct v4l2_fh *fh, struct v4l2_ctrl_handler *hdl,
-			     struct v4l2_ext_controls *cs,
-			     bool set)
+static int __try_set_ext_ctrls(struct v4l2_fh *fh,
+			       struct v4l2_ctrl_handler *hdl,
+			       struct v4l2_ext_controls *cs, bool set)
 {
 	struct v4l2_ctrl_helper helper[4];
 	struct v4l2_ctrl_helper *helpers = helper;
@@ -3329,6 +3389,36 @@ static int try_set_ext_ctrls(struct v4l2_fh *fh, struct v4l2_ctrl_handler *hdl,
 
 	if (cs->count > ARRAY_SIZE(helper))
 		kvfree(helpers);
+	return ret;
+}
+
+static int try_set_ext_ctrls(struct v4l2_fh *fh, struct v4l2_ctrl_handler *hdl,
+			     struct v4l2_ext_controls *cs, bool set)
+{
+	struct media_request *req = NULL;
+	int ret;
+
+	if (cs->request_fd > 0) {
+		req = get_handler_for_request(fh, cs, &hdl);
+		if (IS_ERR(req))
+			return PTR_ERR(req);
+
+		media_request_lock(req);
+
+		if (media_request_get_state(req) != MEDIA_REQUEST_STATE_IDLE) {
+			ret = -EBUSY;
+			goto out;
+		}
+	}
+
+	ret = __try_set_ext_ctrls(fh, hdl, cs, set);
+
+out:
+	if (req) {
+		media_request_unlock(req);
+		media_request_put(req);
+	}
+
 	return ret;
 }
 

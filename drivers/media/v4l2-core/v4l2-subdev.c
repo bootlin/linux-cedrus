@@ -202,7 +202,7 @@ static long subdev_do_ioctl(struct file *file, unsigned int cmd, void *arg)
 		return v4l2_s_ctrl(vfh, vfh->ctrl_handler, arg);
 
 	case VIDIOC_G_EXT_CTRLS:
-		return v4l2_g_ext_ctrls(vfh->ctrl_handler, arg);
+		return v4l2_g_ext_ctrls(vfh, vfh->ctrl_handler, arg);
 
 	case VIDIOC_S_EXT_CTRLS:
 		return v4l2_s_ext_ctrls(vfh, vfh->ctrl_handler, arg);
