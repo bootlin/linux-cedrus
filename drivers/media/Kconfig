@@ -130,6 +130,9 @@ config VIDEO_V4L2_SUBDEV_API
 
 	  This API is mostly used by camera interfaces in embedded platforms.
 
+config MEDIA_REQUEST_API
+	tristate
+
 source "drivers/media/v4l2-core/Kconfig"
 
 #

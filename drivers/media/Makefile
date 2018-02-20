@@ -6,6 +6,12 @@
 media-objs	:= media-device.o media-devnode.o media-entity.o
 
 #
+# Request API support comes as its own module since it can be used by
+# both media and video devices
+#
+obj-$(CONFIG_MEDIA_REQUEST_API) += media-request.o
+
+#
 # I2C drivers should come before other drivers, otherwise they'll fail
 # when compiled as builtin drivers
 #
