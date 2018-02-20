@@ -900,7 +900,8 @@ int rvin_v4l2_probe(struct rvin_dev *vin)
 	if (ret < 0)
 		return ret;
 
-	ret = v4l2_ctrl_add_handler(&vin->ctrl_handler, sd->ctrl_handler, NULL);
+	ret = v4l2_ctrl_add_handler(&vin->ctrl_handler, sd->ctrl_handler,
+				    NULL, true);
 	if (ret < 0)
 		return ret;
 
