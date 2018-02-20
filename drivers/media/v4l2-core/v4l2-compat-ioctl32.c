@@ -386,7 +386,7 @@ struct v4l2_buffer32 {
 		__s32		fd;
 	} m;
 	__u32			length;
-	__u32			reserved2;
+	__s32			request_fd;
 	__u32			reserved;
 };
 
@@ -486,6 +486,7 @@ static int get_v4l2_buffer32(struct v4l2_buffer __user *kp,
 {
 	u32 type;
 	u32 length;
+	s32 request_fd;
 	enum v4l2_memory memory;
 	struct v4l2_plane32 __user *uplane32;
 	struct v4l2_plane __user *uplane;
@@ -500,7 +501,9 @@ static int get_v4l2_buffer32(struct v4l2_buffer __user *kp,
 	    get_user(memory, &up->memory) ||
 	    put_user(memory, &kp->memory) ||
 	    get_user(length, &up->length) ||
-	    put_user(length, &kp->length))
+	    put_user(length, &kp->length) ||
+	    get_user(request_fd, &up->request_fd) ||
+	    put_user(request_fd, &kp->request_fd))
 		return -EFAULT;
 
 	if (V4L2_TYPE_IS_OUTPUT(type))
@@ -604,7 +607,7 @@ static int put_v4l2_buffer32(struct v4l2_buffer __user *kp,
 	    assign_in_user(&up->timestamp.tv_usec, &kp->timestamp.tv_usec) ||
 	    copy_in_user(&up->timecode, &kp->timecode, sizeof(kp->timecode)) ||
 	    assign_in_user(&up->sequence, &kp->sequence) ||
-	    assign_in_user(&up->reserved2, &kp->reserved2) ||
+	    assign_in_user(&up->request_fd, &kp->request_fd) ||
 	    assign_in_user(&up->reserved, &kp->reserved) ||
 	    get_user(length, &kp->length) ||
 	    put_user(length, &up->length))
