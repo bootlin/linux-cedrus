@@ -250,6 +250,10 @@ struct v4l2_ctrl {
  *		``prepare_ext_ctrls`` function at ``v4l2-ctrl.c``.
  * @from_other_dev: If true, then @ctrl was defined in another
  *		device then the &struct v4l2_ctrl_handler.
+ * @done:	If true, then this control reference is part of a
+ *		control cluster that was already set while applying
+ *		the controls in this media request object.
+ * @req:	If set, this refers to another request that sets this control.
  * @p_req:	The request value. Only used if the control handler
  *		is bound to a media request.
  *
@@ -263,6 +267,8 @@ struct v4l2_ctrl_ref {
 	struct v4l2_ctrl *ctrl;
 	struct v4l2_ctrl_helper *helper;
 	bool from_other_dev;
+	bool done;
+	struct v4l2_ctrl_ref *req;
 	union v4l2_ctrl_ptr p_req;
 };
 
@@ -287,6 +293,15 @@ struct v4l2_ctrl_ref {
  * @notify_priv: Passed as argument to the v4l2_ctrl notify callback.
  * @nr_of_buckets: Total number of buckets in the array.
  * @error:	The error code of the first failed control addition.
+ * @request_is_queued: True if the request was queued.
+ * @requests:	List to keep track of open control handler request objects.
+ *		For the parent control handler (@req_obj.req == NULL) this
+ *		is the list header. When the parent control handler is
+ *		removed, it has to unbind and put all these requests since
+ *		they refer to the parent.
+ * @requests_queued: List of the queued requests. This determines the order
+ *		in which these controls are applied. Once the request is
+ *		completed it is removed from this list.
  * @req_obj:	The &struct media_request_object, used to link into a
  *		&struct media_request.
  */
@@ -301,6 +316,9 @@ struct v4l2_ctrl_handler {
 	void *notify_priv;
 	u16 nr_of_buckets;
 	int error;
+	bool request_is_queued;
+	struct list_head requests;
+	struct list_head requests_queued;
 	struct media_request_object req_obj;
 };
 
@@ -1058,6 +1076,11 @@ int v4l2_ctrl_subscribe_event(struct v4l2_fh *fh,
  * @wait: pointer to struct poll_table_struct
  */
 __poll_t v4l2_ctrl_poll(struct file *file, struct poll_table_struct *wait);
+
+void v4l2_ctrl_request_setup(struct media_request *req,
+			     struct v4l2_ctrl_handler *hdl);
+void v4l2_ctrl_request_complete(struct media_request *req,
+				struct v4l2_ctrl_handler *hdl);
 
 /* Helpers for ioctl_ops */
 
