@@ -301,10 +301,13 @@ struct v4l2_buffer
 	elements in the ``planes`` array. The driver will fill in the
 	actual number of valid elements in that array.
     * - __u32
-      - ``reserved2``
+      - ``request_fd``
       -
-      - A place holder for future extensions. Drivers and applications
-	must set this to 0.
+      - The file descriptor of the request to queue the buffer to. If specified,
+	the buffer will be queued to that request. If zero, the buffer will
+	be directly queued to the queue designated by the ``type`` field. This
+	is set by the user when calling :ref:`VIDIOC_QBUF` and ignored by other
+	ioctls.
     * - __u32
       - ``reserved``
       -
