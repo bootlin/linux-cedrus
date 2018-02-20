@@ -259,6 +259,7 @@ struct v4l2_ctrl_ref {
 	struct v4l2_ctrl *ctrl;
 	struct v4l2_ctrl_helper *helper;
 	union v4l2_ctrl_ptr p_req;
+	bool done;
 	bool from_other_dev;
 };
 
@@ -1056,6 +1057,7 @@ int v4l2_ctrl_request_init(struct v4l2_ctrl_handler *hdl);
 int v4l2_ctrl_request_clone(struct v4l2_ctrl_handler *hdl,
 			    const struct v4l2_ctrl_handler *from,
 			    bool (*filter)(const struct v4l2_ctrl *ctrl));
+void v4l2_ctrl_request_setup(struct v4l2_ctrl_handler *hdl);
 void v4l2_ctrl_request_get(struct v4l2_ctrl_handler *hdl);
 void v4l2_ctrl_request_put(struct v4l2_ctrl_handler *hdl);
 
