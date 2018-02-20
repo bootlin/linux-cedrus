@@ -388,11 +388,12 @@ EXPORT_SYMBOL_GPL(v4l2_m2m_querybuf);
 int v4l2_m2m_qbuf(struct file *file, struct v4l2_m2m_ctx *m2m_ctx,
 		  struct v4l2_buffer *buf)
 {
+	struct v4l2_fh *fh = file->private_data;
 	struct vb2_queue *vq;
 	int ret;
 
 	vq = v4l2_m2m_get_vq(m2m_ctx, buf->type);
-	ret = vb2_qbuf(vq, buf);
+	ret = vb2_qbuf_request(vq, buf, fh->entity);
 	if (!ret)
 		v4l2_m2m_try_schedule(m2m_ctx);
 
