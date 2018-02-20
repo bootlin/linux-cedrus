@@ -44,3 +44,4 @@ applicable to all devices.
     crop
     selection-api
     streaming-par
+    request-api
