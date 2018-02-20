@@ -28,8 +28,11 @@
 #include <media/v4l2-fh.h>
 #include <media/v4l2-event.h>
 #include <media/v4l2-common.h>
+#include <media/v4l2-ioctl.h>
+#include <media/v4l2-request.h>
 
 #include <media/videobuf2-v4l2.h>
+#include <media/media-request.h>
 
 static int debug;
 module_param(debug, int, 0644);
@@ -569,10 +572,130 @@ int vb2_qbuf(struct vb2_queue *q, struct v4l2_buffer *b)
 		return -EBUSY;
 	}
 
+	/* drivers supporting requests must call vb2_qbuf_request instead */
+	if (b->request_fd > 0) {
+		dprintk(1, "invalid call to vb2_qbuf with request_fd set\n");
+		return -EINVAL;
+	}
+
 	ret = vb2_queue_or_prepare_buf(q, b, "qbuf");
 	return ret ? ret : vb2_core_qbuf(q, b->index, b);
 }
 EXPORT_SYMBOL_GPL(vb2_qbuf);
+
+#if IS_ENABLED(CONFIG_MEDIA_REQUEST_API)
+int vb2_qbuf_request(struct vb2_queue *q, struct v4l2_buffer *b,
+		     struct media_request_entity *entity)
+{
+	struct v4l2_request_entity_data *data;
+	struct v4l2_vb2_request_buffer *qb;
+	struct media_request *req;
+	struct vb2_buffer *vb;
+	int ret = 0;
+
+	if (b->request_fd <= 0)
+		return vb2_qbuf(q, b);
+
+	if (!q->allow_requests)
+		return -EINVAL;
+
+	req = media_request_get_from_fd(b->request_fd);
+	if (!req)
+		return -EINVAL;
+
+	data = to_v4l2_entity_data(media_request_get_entity_data(req, entity));
+	if (IS_ERR(data)) {
+		ret = PTR_ERR(data);
+		goto out;
+	}
+
+	mutex_lock(&req->lock);
+
+	if (req->state != MEDIA_REQUEST_STATE_IDLE) {
+		ret = -EINVAL;
+		goto out;
+	}
+
+	ret = vb2_queue_or_prepare_buf(q, b, "qbuf");
+	if (ret)
+		goto out;
+
+	vb = q->bufs[b->index];
+	switch (vb->state) {
+	case VB2_BUF_STATE_DEQUEUED:
+		break;
+	case VB2_BUF_STATE_PREPARED:
+		break;
+	case VB2_BUF_STATE_PREPARING:
+		dprintk(1, "buffer still being prepared\n");
+		ret = -EINVAL;
+		goto out;
+	default:
+		dprintk(1, "invalid buffer state %d\n", vb->state);
+		ret = -EINVAL;
+		goto out;
+	}
+
+	/* do we already have a buffer for this request in the queue? */
+	list_for_each_entry(qb, &data->queued_buffers, node) {
+		if (qb->queue == q) {
+			ret = -EBUSY;
+			goto out;
+		}
+	}
+
+	qb = kzalloc(sizeof(*qb), GFP_KERNEL);
+	if (!qb) {
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	/*
+	 * TODO should be prepare the buffer here if needed, to report errors
+	 * early?
+	 */
+	qb->pre_req_state = vb->state;
+	qb->queue = q;
+	memcpy(&qb->v4l2_buf, b, sizeof(*b));
+	vb->request = req;
+	vb->state = VB2_BUF_STATE_QUEUED;
+	list_add_tail(&qb->node, &data->queued_buffers);
+
+out:
+	mutex_unlock(&req->lock);
+	media_request_put(req);
+
+	return ret;
+}
+EXPORT_SYMBOL_GPL(vb2_qbuf_request);
+
+int vb2_request_submit(struct v4l2_request_entity_data *data)
+{
+	struct v4l2_vb2_request_buffer *qb, *n;
+
+	/* v4l2 requests require at least one buffer to reach the device */
+	if (list_empty(&data->queued_buffers)) {
+		return -EINVAL;
+	}
+
+	list_for_each_entry_safe(qb, n, &data->queued_buffers, node) {
+		struct vb2_queue *q = qb->queue;
+		struct vb2_buffer *vb = q->bufs[qb->v4l2_buf.index];
+		int ret;
+
+		list_del(&qb->node);
+		vb->state = qb->pre_req_state;
+		ret = vb2_core_qbuf(q, vb->index, &qb->v4l2_buf);
+		kfree(qb);
+		if (ret)
+			return ret;
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(vb2_request_submit);
+
+#endif /* CONFIG_MEDIA_REQUEST_API */
 
 int vb2_dqbuf(struct vb2_queue *q, struct v4l2_buffer *b, bool nonblocking)
 {
@@ -776,10 +899,14 @@ EXPORT_SYMBOL_GPL(vb2_ioctl_querybuf);
 int vb2_ioctl_qbuf(struct file *file, void *priv, struct v4l2_buffer *p)
 {
 	struct video_device *vdev = video_devdata(file);
+	struct v4l2_fh *fh = NULL;
+
+	if (test_bit(V4L2_FL_USES_V4L2_FH, &vdev->flags))
+		fh = file->private_data;
 
 	if (vb2_queue_is_busy(vdev, file))
 		return -EBUSY;
-	return vb2_qbuf(vdev->queue, p);
+	return vb2_qbuf_request(vdev->queue, p, fh ? fh->entity : NULL);
 }
 EXPORT_SYMBOL_GPL(vb2_ioctl_qbuf);
 

@@ -23,6 +23,12 @@
 #error VB2_MAX_PLANES != VIDEO_MAX_PLANES
 #endif
 
+struct media_entity;
+struct v4l2_fh;
+struct media_request;
+struct media_request_entity;
+struct v4l2_request_entity_data;
+
 /**
  * struct vb2_v4l2_buffer - video buffer information for v4l2.
  *
@@ -115,6 +121,59 @@ int vb2_prepare_buf(struct vb2_queue *q, struct v4l2_buffer *b);
  * from &v4l2_ioctl_ops->vidioc_qbuf handler in driver.
  */
 int vb2_qbuf(struct vb2_queue *q, struct v4l2_buffer *b);
+
+#if IS_ENABLED(CONFIG_MEDIA_REQUEST_API)
+
+/**
+ * vb2_qbuf_request() - Queue a buffer, with request support
+ * @q:		pointer to &struct vb2_queue with videobuf2 queue.
+ * @b:		buffer structure passed from userspace to
+ *		&v4l2_ioctl_ops->vidioc_qbuf handler in driver
+ * @entity:	request entity to queue for if requests are used.
+ *
+ * Should be called from &v4l2_ioctl_ops->vidioc_qbuf handler of a driver.
+ *
+ * If requests are not in use, calling this is equivalent to calling vb2_qbuf().
+ *
+ * If the request_fd member of b is set, then the buffer represented by b is
+ * queued in the request instead of the vb2 queue. The buffer will be passed
+ * to the vb2 queue when the request is submitted.
+ *
+ * The return values from this function are intended to be directly returned
+ * from &v4l2_ioctl_ops->vidioc_qbuf handler in driver.
+ */
+int vb2_qbuf_request(struct vb2_queue *q, struct v4l2_buffer *b,
+		     struct media_request_entity *entity);
+
+/**
+ * vb2_request_submit() - Queue all the buffers in a v4l2 request.
+ * @data:	request entity data to queue buffers of
+ *
+ * This function should be called from the media_request_entity_ops::submit
+ * hook for instances of media_request_v4l2_entity_data. It will immediately
+ * queue all the request-bound buffers to their respective vb2 queues.
+ *
+ * Errors from vb2_core_qbuf() are returned if something happened. Also, since
+ * v4l2 request entities require at least one buffer for the request to trigger,
+ * this function will return -EINVAL if no buffer have been bound at all for
+ * this entity.
+ */
+int vb2_request_submit(struct v4l2_request_entity_data *data);
+
+#else /* CONFIG_MEDIA_REQUEST_API */
+
+static inline int vb2_qbuf_request(struct vb2_queue *q, struct v4l2_buffer *b,
+				   struct media_request_entity *entity)
+{
+	return vb2_qbuf(q, b);
+}
+
+static inline int vb2_request_submit(struct v4l2_request_entity_data *data)
+{
+	return -ENOTSUPP;
+}
+
+#endif /* CONFIG_MEDIA_REQUEST_API */
 
 /**
  * vb2_expbuf() - Export a buffer as a file descriptor
