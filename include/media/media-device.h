@@ -127,6 +127,7 @@ struct media_device {
 	/* dev->driver_data points to this struct. */
 	struct device *dev;
 	struct media_devnode *devnode;
+	struct media_request_mgr *req_mgr;
 
 	char model[32];
 	char driver_name[32];

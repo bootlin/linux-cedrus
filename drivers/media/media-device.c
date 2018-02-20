@@ -32,6 +32,7 @@
 #include <media/media-device.h>
 #include <media/media-devnode.h>
 #include <media/media-entity.h>
+#include <media/media-request.h>
 
 #ifdef CONFIG_MEDIA_CONTROLLER
 
@@ -359,6 +360,15 @@ static long media_device_get_topology(struct media_device *mdev,
 	return ret;
 }
 
+static long media_device_new_request(struct media_device *mdev,
+				     struct media_request_new *new)
+{
+	if (!mdev->req_mgr)
+		return -ENOTTY;
+
+	return media_request_ioctl_new(mdev->req_mgr, new);
+}
+
 static long copy_arg_from_user(void *karg, void __user *uarg, unsigned int cmd)
 {
 	/* All media IOCTLs are _IOWR() */
@@ -407,6 +417,7 @@ static const struct media_ioctl_info ioctl_info[] = {
 	MEDIA_IOC(ENUM_LINKS, media_device_enum_links, MEDIA_IOC_FL_GRAPH_MUTEX),
 	MEDIA_IOC(SETUP_LINK, media_device_setup_link, MEDIA_IOC_FL_GRAPH_MUTEX),
 	MEDIA_IOC(G_TOPOLOGY, media_device_get_topology, MEDIA_IOC_FL_GRAPH_MUTEX),
+	MEDIA_IOC(NEW_REQUEST, media_device_new_request, 0),
 };
 
 static long media_device_ioctl(struct file *filp, unsigned int cmd,

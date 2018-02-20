@@ -26,6 +26,8 @@
 #include <linux/list.h>
 #include <linux/media.h>
 
+struct mc_request_entity;
+
 /* Enums used internally at the media controller to represent graphs */
 
 /**
@@ -243,6 +245,7 @@ enum media_entity_type {
  *		re-used if entities are unregistered or registered again.
  * @pads:	Pads array with the size defined by @num_pads.
  * @links:	List of data links.
+ * @req_entity:	Pointer to the request entity representing this entity, if any
  * @ops:	Entity operations.
  * @stream_count: Stream count for the entity.
  * @use_count:	Use count for the entity.
@@ -278,6 +281,8 @@ struct media_entity {
 
 	struct media_pad *pads;
 	struct list_head links;
+
+	struct mc_request_entity *req_entity;
 
 	const struct media_entity_operations *ops;
 

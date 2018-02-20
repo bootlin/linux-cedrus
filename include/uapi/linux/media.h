@@ -30,6 +30,7 @@
 #include <linux/ioctl.h>
 #include <linux/types.h>
 #include <linux/version.h>
+#include <linux/media-request.h>
 
 struct media_device_info {
 	char driver[16];
@@ -413,5 +414,6 @@ struct media_v2_topology {
 #define MEDIA_IOC_ENUM_LINKS		_IOWR('|', 0x02, struct media_links_enum)
 #define MEDIA_IOC_SETUP_LINK		_IOWR('|', 0x03, struct media_link_desc)
 #define MEDIA_IOC_G_TOPOLOGY		_IOWR('|', 0x04, struct media_v2_topology)
+#define MEDIA_IOC_NEW_REQUEST		_IOR('|', 0x05, struct media_request_new)
 
 #endif /* __LINUX_MEDIA_H */
