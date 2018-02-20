@@ -20,6 +20,7 @@
 #include <linux/list.h>
 #include <linux/mutex.h>
 #include <linux/videodev2.h>
+#include <media/media-request.h>
 
 /* forward references */
 struct file;
@@ -249,6 +250,8 @@ struct v4l2_ctrl {
  *		``prepare_ext_ctrls`` function at ``v4l2-ctrl.c``.
  * @from_other_dev: If true, then @ctrl was defined in another
  *		device then the &struct v4l2_ctrl_handler.
+ * @p_req:	The request value. Only used if the control handler
+ *		is bound to a media request.
  *
  * Each control handler has a list of these refs. The list_head is used to
  * keep a sorted-by-control-ID list of all controls, while the next pointer
@@ -260,6 +263,7 @@ struct v4l2_ctrl_ref {
 	struct v4l2_ctrl *ctrl;
 	struct v4l2_ctrl_helper *helper;
 	bool from_other_dev;
+	union v4l2_ctrl_ptr p_req;
 };
 
 /**
@@ -283,6 +287,8 @@ struct v4l2_ctrl_ref {
  * @notify_priv: Passed as argument to the v4l2_ctrl notify callback.
  * @nr_of_buckets: Total number of buckets in the array.
  * @error:	The error code of the first failed control addition.
+ * @req_obj:	The &struct media_request_object, used to link into a
+ *		&struct media_request.
  */
 struct v4l2_ctrl_handler {
 	struct mutex _lock;
@@ -295,6 +301,7 @@ struct v4l2_ctrl_handler {
 	void *notify_priv;
 	u16 nr_of_buckets;
 	int error;
+	struct media_request_object req_obj;
 };
 
 /**
