@@ -1528,6 +1528,13 @@ static int new_to_user(struct v4l2_ext_control *c,
 	return ptr_to_user(c, ctrl, ctrl->p_new);
 }
 
+/* Helper function: copy the request value back to the caller */
+static int req_to_user(struct v4l2_ext_control *c,
+		       struct v4l2_ctrl_ref *ref)
+{
+	return ptr_to_user(c, ref->ctrl, ref->p_req);
+}
+
 /* Helper function: copy the initial control value back to the caller */
 static int def_to_user(struct v4l2_ext_control *c, struct v4l2_ctrl *ctrl)
 {
@@ -1645,6 +1652,14 @@ static void cur_to_new(struct v4l2_ctrl *ctrl)
 	if (ctrl == NULL)
 		return;
 	ptr_to_ptr(ctrl, ctrl->p_cur, ctrl->p_new);
+}
+
+/* Copy the new value to the request value */
+static void new_to_req(struct v4l2_ctrl_ref *ref)
+{
+	if (!ref)
+		return;
+	ptr_to_ptr(ref->ctrl, ref->ctrl->p_new, ref->p_req);
 }
 
 /* Return non-zero if one or more of the controls in the cluster has a new
@@ -2971,7 +2986,8 @@ int v4l2_g_ext_ctrls(struct v4l2_ctrl_handler *hdl, struct v4l2_ext_controls *cs
 				    struct v4l2_ctrl *ctrl);
 		struct v4l2_ctrl *master;
 
-		ctrl_to_user = def_value ? def_to_user : cur_to_user;
+		ctrl_to_user = def_value ? def_to_user :
+			       (hdl->is_request ? NULL : cur_to_user);
 
 		if (helpers[i].mref == NULL)
 			continue;
@@ -2997,8 +3013,12 @@ int v4l2_g_ext_ctrls(struct v4l2_ctrl_handler *hdl, struct v4l2_ext_controls *cs
 			u32 idx = i;
 
 			do {
-				ret = ctrl_to_user(cs->controls + idx,
-						   helpers[idx].ref->ctrl);
+				if (ctrl_to_user)
+					ret = ctrl_to_user(cs->controls + idx,
+						helpers[idx].ref->ctrl);
+				else
+					ret = req_to_user(cs->controls + idx,
+						helpers[idx].ref);
 				idx = helpers[idx].next;
 			} while (!ret && idx);
 		}
@@ -3271,7 +3291,16 @@ static int try_set_ext_ctrls(struct v4l2_fh *fh, struct v4l2_ctrl_handler *hdl,
 		} while (!ret && idx);
 
 		if (!ret)
-			ret = try_or_set_cluster(fh, master, set, 0);
+			ret = try_or_set_cluster(fh, master,
+						 !hdl->is_request && set, 0);
+		if (!ret && hdl->is_request && set) {
+			for (j = 0; j < master->ncontrols; j++) {
+				struct v4l2_ctrl_ref *ref =
+					find_ref(hdl, master->cluster[j]->id);
+
+				new_to_req(ref);
+			}
+		}
 
 		/* Copy the new values back to userspace. */
 		if (!ret) {
