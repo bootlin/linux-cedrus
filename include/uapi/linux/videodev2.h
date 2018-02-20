@@ -63,6 +63,7 @@
 #include <linux/compiler.h>
 #include <linux/ioctl.h>
 #include <linux/types.h>
+#include <linux/media-request.h>
 #include <linux/v4l2-common.h>
 #include <linux/v4l2-controls.h>
 
@@ -2406,6 +2407,8 @@ struct v4l2_create_buffers {
 #define VIDIOC_DBG_G_CHIP_INFO  _IOWR('V', 102, struct v4l2_dbg_chip_info)
 
 #define VIDIOC_QUERY_EXT_CTRL	_IOWR('V', 103, struct v4l2_query_ext_ctrl)
+
+#define VIDIOC_NEW_REQUEST	_IOWR('V', 104, struct media_request_new)
 
 /* Reminder: when adding new ioctls please add support for them to
    drivers/media/v4l2-core/v4l2-compat-ioctl32.c as well! */

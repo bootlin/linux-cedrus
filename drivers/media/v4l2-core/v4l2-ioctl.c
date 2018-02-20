@@ -21,6 +21,7 @@
 
 #include <linux/videodev2.h>
 
+#include <media/media-request.h>
 #include <media/v4l2-common.h>
 #include <media/v4l2-ioctl.h>
 #include <media/v4l2-ctrls.h>
@@ -840,6 +841,13 @@ static void v4l_print_freq_band(const void *arg, bool write_only)
 			p->tuner, p->type, p->index,
 			p->capability, p->rangelow,
 			p->rangehigh, p->modulation);
+}
+
+static void vidioc_print_new_request(const void *arg, bool write_only)
+{
+	const struct media_request_new *new = arg;
+
+	pr_cont("fd=0x%x\n", new->fd);
 }
 
 static void v4l_print_edid(const void *arg, bool write_only)
@@ -2486,6 +2494,22 @@ static int v4l_enum_freq_bands(const struct v4l2_ioctl_ops *ops,
 	return -ENOTTY;
 }
 
+static int vidioc_new_request(const struct v4l2_ioctl_ops *ops,
+			      struct file *file, void *fh, void *arg)
+{
+#if IS_ENABLED(CONFIG_MEDIA_REQUEST_API)
+	struct media_request_new *new = arg;
+	struct video_device *vfd = video_devdata(file);
+
+	if (!vfd->req_mgr)
+		return -ENOTTY;
+
+	return media_request_ioctl_new(vfd->req_mgr, new);
+#else
+	return -ENOTTY;
+#endif
+}
+
 struct v4l2_ioctl_info {
 	unsigned int ioctl;
 	u32 flags;
@@ -2617,6 +2641,7 @@ static struct v4l2_ioctl_info v4l2_ioctls[] = {
 	IOCTL_INFO_FNC(VIDIOC_ENUM_FREQ_BANDS, v4l_enum_freq_bands, v4l_print_freq_band, 0),
 	IOCTL_INFO_FNC(VIDIOC_DBG_G_CHIP_INFO, v4l_dbg_g_chip_info, v4l_print_dbg_chip_info, INFO_FL_CLEAR(v4l2_dbg_chip_info, match)),
 	IOCTL_INFO_FNC(VIDIOC_QUERY_EXT_CTRL, v4l_query_ext_ctrl, v4l_print_query_ext_ctrl, INFO_FL_CTRL | INFO_FL_CLEAR(v4l2_query_ext_ctrl, id)),
+	IOCTL_INFO_FNC(VIDIOC_NEW_REQUEST, vidioc_new_request, vidioc_print_new_request, 0),
 };
 #define V4L2_IOCTLS ARRAY_SIZE(v4l2_ioctls)
 

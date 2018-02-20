@@ -209,6 +209,7 @@ struct v4l2_file_operations {
  * @entity: &struct media_entity
  * @intf_devnode: pointer to &struct media_intf_devnode
  * @pipe: &struct media_pipeline
+ * @req_mgr: request manager to use if this device supports creating requests
  * @fops: pointer to &struct v4l2_file_operations for the video device
  * @device_caps: device capabilities as used in v4l2_capabilities
  * @dev: &struct device for the video device
@@ -251,6 +252,7 @@ struct video_device
 	struct media_intf_devnode *intf_devnode;
 	struct media_pipeline pipe;
 #endif
+	struct media_request_mgr *req_mgr;
 	const struct v4l2_file_operations *fops;
 
 	u32 device_caps;
