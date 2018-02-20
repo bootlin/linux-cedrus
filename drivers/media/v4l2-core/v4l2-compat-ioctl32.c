@@ -732,7 +732,8 @@ struct v4l2_ext_controls32 {
 	__u32 which;
 	__u32 count;
 	__u32 error_idx;
-	__u32 reserved[2];
+	__s32 request_fd;
+	__u32 reserved[1];
 	compat_caddr_t controls; /* actually struct v4l2_ext_control32 * */
 };
 
@@ -807,6 +808,7 @@ static int get_v4l2_ext_controls32(struct file *file,
 	    get_user(count, &up->count) ||
 	    put_user(count, &kp->count) ||
 	    assign_in_user(&kp->error_idx, &up->error_idx) ||
+	    assign_in_user(&kp->request_fd, &up->request_fd) ||
 	    copy_in_user(kp->reserved, up->reserved, sizeof(kp->reserved)))
 		return -EFAULT;
 
@@ -865,6 +867,7 @@ static int put_v4l2_ext_controls32(struct file *file,
 	    get_user(count, &kp->count) ||
 	    put_user(count, &up->count) ||
 	    assign_in_user(&up->error_idx, &kp->error_idx) ||
+	    assign_in_user(&up->request_fd, &kp->request_fd) ||
 	    copy_in_user(up->reserved, kp->reserved, sizeof(up->reserved)) ||
 	    get_user(kcontrols, &kp->controls))
 		return -EFAULT;
