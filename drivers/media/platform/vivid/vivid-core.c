@@ -35,6 +35,7 @@
 #include <media/v4l2-ioctl.h>
 #include <media/v4l2-fh.h>
 #include <media/v4l2-event.h>
+#include <media/v4l2-request.h>
 
 #include "vivid-core.h"
 #include "vivid-vid-common.h"
@@ -498,6 +499,33 @@ static const struct v4l2_file_operations vivid_fops = {
 	.mmap           = vb2_fop_mmap,
 };
 
+static int vivid_cap_open(struct file *filp)
+{
+	struct vivid_dev *dev;
+	struct v4l2_fh *fh;
+	int ret;
+
+	ret = v4l2_fh_open(filp);
+	if (ret)
+		return ret;
+
+	dev = container_of(video_devdata(filp), struct vivid_dev, vid_cap_dev);
+	fh = filp->private_data;
+	fh->entity = &dev->vid_cap_req_entity.base;
+
+	return ret;
+}
+
+static const struct v4l2_file_operations vivid_cap_fops = {
+	.owner		= THIS_MODULE,
+	.open           = vivid_cap_open,
+	.release        = vivid_fop_release,
+	.read           = vb2_fop_read,
+	.write          = vb2_fop_write,
+	.poll		= vb2_fop_poll,
+	.unlocked_ioctl = video_ioctl2,
+	.mmap           = vb2_fop_mmap,
+};
 static const struct v4l2_file_operations vivid_radio_fops = {
 	.owner		= THIS_MODULE,
 	.open           = v4l2_fh_open,
@@ -617,6 +645,31 @@ static const struct v4l2_ioctl_ops vivid_ioctl_ops = {
 	.vidioc_log_status		= vidioc_log_status,
 	.vidioc_subscribe_event		= vidioc_subscribe_event,
 	.vidioc_unsubscribe_event	= v4l2_event_unsubscribe,
+};
+
+struct media_request_entity_data *
+vid_cap_entity_data_alloc(struct media_request *req,
+			struct media_request_entity *entity)
+{
+	struct vivid_dev *dev;
+
+	dev = container_of(entity, struct vivid_dev, vid_cap_req_entity.base);
+	return v4l2_request_entity_data_alloc(req, &dev->ctrl_hdl_vid_cap);
+}
+
+static int vid_cap_request_submit(struct media_request *req,
+				struct media_request_entity_data *_data)
+{
+	struct v4l2_request_entity_data *data;
+
+	data = to_v4l2_entity_data(_data);
+	return vb2_request_submit(data);
+}
+
+static const struct media_request_entity_ops vivid_request_entity_ops = {
+	.data_alloc	= vid_cap_entity_data_alloc,
+	.data_free	= v4l2_request_entity_data_free,
+	.submit		= vid_cap_request_submit,
 };
 
 /* -----------------------------------------------------------------
@@ -1069,6 +1122,7 @@ static int vivid_create_instance(struct platform_device *pdev, int inst)
 		q->mem_ops = vivid_mem_ops[allocator];
 		q->timestamp_flags = V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC;
 		q->min_buffers_needed = 2;
+		q->allow_requests = true;
 		q->lock = &dev->mutex;
 		q->dev = dev->v4l2_dev.dev;
 
@@ -1170,13 +1224,19 @@ static int vivid_create_instance(struct platform_device *pdev, int inst)
 		vfd = &dev->vid_cap_dev;
 		snprintf(vfd->name, sizeof(vfd->name),
 			 "vivid-%03d-vid-cap", inst);
-		vfd->fops = &vivid_fops;
+		vfd->fops = &vivid_cap_fops;
 		vfd->ioctl_ops = &vivid_ioctl_ops;
 		vfd->device_caps = dev->vid_cap_caps;
 		vfd->release = video_device_release_empty;
 		vfd->v4l2_dev = &dev->v4l2_dev;
 		vfd->queue = &dev->vb_vid_cap_q;
 		vfd->tvnorms = tvnorms_cap;
+		vfd->req_mgr = &dev->vid_cap_req_mgr.base;
+		v4l2_request_mgr_init(&dev->vid_cap_req_mgr, vfd,
+				      &v4l2_request_ops);
+		v4l2_request_entity_init(&dev->vid_cap_req_entity,
+					 &vivid_request_entity_ops,
+					 vfd);
 
 		/*
 		 * Provide a mutex to v4l2 core. It will be used to protect
@@ -1460,6 +1520,7 @@ static int vivid_remove(struct platform_device *pdev)
 			v4l2_info(&dev->v4l2_dev, "unregistering %s\n",
 				video_device_node_name(&dev->vid_cap_dev));
 			video_unregister_device(&dev->vid_cap_dev);
+			v4l2_request_mgr_free(&dev->vid_cap_req_mgr);
 		}
 		if (dev->has_vid_out) {
 			v4l2_info(&dev->v4l2_dev, "unregistering %s\n",

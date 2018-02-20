@@ -31,6 +31,7 @@
 #include <linux/random.h>
 #include <linux/v4l2-dv-timings.h>
 #include <asm/div64.h>
+#include <media/media-request.h>
 #include <media/videobuf2-vmalloc.h>
 #include <media/v4l2-dv-timings.h>
 #include <media/v4l2-ioctl.h>
@@ -715,6 +716,17 @@ static void vivid_thread_vid_cap_tick(struct vivid_dev *dev, int dropped_bufs)
 		goto update_mv;
 
 	if (vid_cap_buf) {
+		struct media_request *req = vid_cap_buf->vb.vb2_buf.request;
+
+		/* Using request? Apply its controls */
+		if (req) {
+			struct v4l2_request_entity_data *data;
+			data = to_v4l2_entity_data(
+				media_request_get_entity_data(req,
+						&dev->vid_cap_req_entity.base));
+			if (!WARN_ON(IS_ERR(data)))
+				v4l2_ctrl_request_setup(&data->ctrls);
+		}
 		/* Fill buffer */
 		vivid_fillbuff(dev, vid_cap_buf);
 		dprintk(dev, 1, "filled buffer %d\n",
@@ -728,6 +740,11 @@ static void vivid_thread_vid_cap_tick(struct vivid_dev *dev, int dropped_bufs)
 		vb2_buffer_done(&vid_cap_buf->vb.vb2_buf, dev->dqbuf_error ?
 				VB2_BUF_STATE_ERROR : VB2_BUF_STATE_DONE);
 		dprintk(dev, 2, "vid_cap buffer %d done\n",
+				vid_cap_buf->vb.vb2_buf.index);
+		if (req)
+			media_request_entity_complete(req,
+						 &dev->vid_cap_req_entity.base);
+		dprintk(dev, 2, "vid_cap buffer %d request completed\n",
 				vid_cap_buf->vb.vb2_buf.index);
 	}
 

@@ -23,6 +23,7 @@
 #include <linux/fb.h>
 #include <linux/workqueue.h>
 #include <media/cec.h>
+#include <media/v4l2-request.h>
 #include <media/videobuf2-v4l2.h>
 #include <media/v4l2-device.h>
 #include <media/v4l2-dev.h>
@@ -157,6 +158,8 @@ struct vivid_dev {
 	struct v4l2_ctrl_handler	ctrl_hdl_fb;
 	struct video_device		vid_cap_dev;
 	struct v4l2_ctrl_handler	ctrl_hdl_vid_cap;
+	struct v4l2_request_mgr		vid_cap_req_mgr;
+	struct v4l2_request_entity	vid_cap_req_entity;
 	struct video_device		vid_out_dev;
 	struct v4l2_ctrl_handler	ctrl_hdl_vid_out;
 	struct video_device		vbi_cap_dev;
