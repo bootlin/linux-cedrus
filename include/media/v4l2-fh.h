@@ -27,6 +27,7 @@
 
 struct video_device;
 struct v4l2_ctrl_handler;
+struct media_request_entity;
 
 /**
  * struct v4l2_fh - Describes a V4L2 file handler
@@ -42,6 +43,7 @@ struct v4l2_ctrl_handler;
  * @navailable: number of available events at @available list
  * @sequence: event sequence number
  * @m2m_ctx: pointer to &struct v4l2_m2m_ctx
+ * @entity: the request entity this fh operates on behalf of
  */
 struct v4l2_fh {
 	struct list_head	list;
@@ -59,6 +61,7 @@ struct v4l2_fh {
 #if IS_ENABLED(CONFIG_V4L2_MEM2MEM_DEV)
 	struct v4l2_m2m_ctx	*m2m_ctx;
 #endif
+	struct media_request_entity *entity;
 };
 
 /**
