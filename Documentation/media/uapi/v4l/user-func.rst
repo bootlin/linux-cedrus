@@ -53,6 +53,7 @@ Function Reference
     vidioc-g-std
     vidioc-g-tuner
     vidioc-log-status
+    vidioc-new-request
     vidioc-overlay
     vidioc-prepare-buf
     vidioc-qbuf
