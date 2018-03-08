@@ -933,9 +933,20 @@ static int vim2m_request_submit(struct media_request *req,
 				struct media_request_entity_data *_data)
 {
 	struct v4l2_request_entity_data *data;
+	struct vim2m_ctx *ctx;
+	int rc;
 
 	data = to_v4l2_entity_data(_data);
-	return vb2_request_submit(data);
+
+	ctx = container_of(_data->entity, struct vim2m_ctx, req_entity.base);
+
+	rc = vb2_request_submit(data);
+	if (rc)
+		return rc;
+
+	v4l2_m2m_try_schedule(ctx->fh.m2m_ctx);
+
+	return 0;
 }
 
 static const struct media_request_entity_ops vim2m_request_entity_ops = {
