@@ -468,6 +468,10 @@ static bool sun4i_backend_plane_uses_frontend(struct drm_plane_state *state)
 	if (IS_ERR(backend->frontend))
 		return false;
 
+	/*
+	 * TODO: Don't use the frontend for x2/x4 scaling and allow RGB formats
+	 * with an alpha component then.
+	 */
 	return sun4i_backend_plane_uses_scaler(state);
 }
 
