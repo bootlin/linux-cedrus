@@ -42,7 +42,7 @@ static struct drm_driver sun4i_drv_driver = {
 	.minor			= 0,
 
 	/* GEM Operations */
-	.dumb_create		= drm_gem_cma_dumb_create,
+	.dumb_create		= drm_sun4i_gem_dumb_create,
 	.gem_free_object_unlocked = drm_gem_cma_free_object,
 	.gem_vm_ops		= &drm_gem_cma_vm_ops,
 
@@ -59,6 +59,15 @@ static struct drm_driver sun4i_drv_driver = {
 
 	/* Frame Buffer Operations */
 };
+
+int drm_sun4i_gem_dumb_create(struct drm_file *file_priv,
+			      struct drm_device *drm,
+			      struct drm_mode_create_dumb *args)
+{
+	args->pitch = ALIGN(DIV_ROUND_UP(args->width * args->bpp, 8), 2);
+
+	return drm_gem_cma_dumb_create_internal(file_priv, drm, args);
+}
 
 static void sun4i_remove_framebuffers(void)
 {
