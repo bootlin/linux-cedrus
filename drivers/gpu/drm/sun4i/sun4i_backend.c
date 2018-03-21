@@ -29,6 +29,7 @@
 #include "sun4i_drv.h"
 #include "sun4i_frontend.h"
 #include "sun4i_layer.h"
+#include "sun4i_format.h"
 #include "sunxi_engine.h"
 
 struct sun4i_backend_quirks {
@@ -37,30 +38,6 @@ struct sun4i_backend_quirks {
 
 	/* alpha at the lowest z position is not always supported */
 	bool supports_lowest_plane_alpha;
-};
-
-static const u32 sunxi_rgb2yuv_coef[12] = {
-	0x00000107, 0x00000204, 0x00000064, 0x00000108,
-	0x00003f69, 0x00003ed6, 0x000001c1, 0x00000808,
-	0x000001c1, 0x00003e88, 0x00003fb8, 0x00000808
-};
-
-/*
- * These coefficients are taken from the A33 BSP from Allwinner.
- *
- * The formula is for each component, each coefficient being multiplied by
- * 1024 and each constant being multiplied by 16:
- * G = 1.164 * Y - 0.391 * U - 0.813 * V + 135
- * R = 1.164 * Y + 1.596 * V - 222
- * B = 1.164 * Y + 2.018 * U + 276
- *
- * This seems to be a conversion from Y[16:235] UV[16:240] to RGB[0:255],
- * following the BT601 spec.
- */
-static const u32 sunxi_bt601_yuv2rgb_coef[12] = {
-	0x000004a7, 0x00001e6f, 0x00001cbf, 0x00000877,
-	0x000004a7, 0x00000000, 0x00000662, 0x00003211,
-	0x000004a7, 0x00000812, 0x00000000, 0x00002eb1,
 };
 
 static void sun4i_backend_apply_color_correction(struct sunxi_engine *engine)
