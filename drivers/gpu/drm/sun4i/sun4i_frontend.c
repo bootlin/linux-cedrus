@@ -128,6 +128,50 @@ static int sun4i_frontend_drm_format_to_output_fmt(uint32_t fmt, u32 *val)
 	}
 }
 
+static const uint32_t sun4i_frontend_formats[] = {
+	/* RGB */
+	DRM_FORMAT_XRGB8888,
+	DRM_FORMAT_BGRX8888,
+	/* YUV444 */
+	DRM_FORMAT_YUV444,
+	DRM_FORMAT_YVU444,
+	/* YUV422 */
+	DRM_FORMAT_YUYV,
+	DRM_FORMAT_YVYU,
+	DRM_FORMAT_UYVY,
+	DRM_FORMAT_VYUY,
+	DRM_FORMAT_NV16,
+	DRM_FORMAT_NV61,
+	DRM_FORMAT_YUV422,
+	DRM_FORMAT_YVU422,
+	/* YUV420 */
+	DRM_FORMAT_NV12,
+	DRM_FORMAT_NV21,
+	DRM_FORMAT_YUV420,
+	DRM_FORMAT_YVU420,
+	/* YUV411 */
+	DRM_FORMAT_YUV411,
+	DRM_FORMAT_YVU411,
+};
+
+bool sun4i_frontend_format_is_supported(uint32_t fmt)
+{
+	bool found = false;
+	unsigned int i;
+
+	for (i = 0; i < ARRAY_SIZE(sun4i_frontend_formats); i++) {
+		if (sun4i_frontend_formats[i] == fmt) {
+			found = true;
+			break;
+		}
+	}
+
+	if (!found)
+		return false;
+
+	return true;
+}
+
 int sun4i_frontend_update_formats(struct sun4i_frontend *frontend,
 				  struct drm_plane *plane, uint32_t out_fmt)
 {
