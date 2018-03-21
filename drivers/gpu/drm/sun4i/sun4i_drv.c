@@ -21,11 +21,18 @@
 #include <drm/drm_gem_cma_helper.h>
 #include <drm/drm_fb_helper.h>
 #include <drm/drm_of.h>
+#include <drm/sun4i_drm.h>
 
 #include "sun4i_drv.h"
 #include "sun4i_frontend.h"
 #include "sun4i_framebuffer.h"
 #include "sun4i_tcon.h"
+#include "sun4i_format.h"
+
+static const struct drm_ioctl_desc sun4i_drv_ioctls[] = {
+	DRM_IOCTL_DEF_DRV(SUN4I_GEM_CREATE_TILED, drm_sun4i_gem_create_tiled,
+			  DRM_AUTH | DRM_RENDER_ALLOW),
+};
 
 DEFINE_DRM_GEM_CMA_FOPS(sun4i_drv_fops);
 
@@ -34,6 +41,8 @@ static struct drm_driver sun4i_drv_driver = {
 
 	/* Generic Operations */
 	.lastclose		= drm_fb_helper_lastclose,
+	.ioctls			= sun4i_drv_ioctls,
+	.num_ioctls		= ARRAY_SIZE(sun4i_drv_ioctls),
 	.fops			= &sun4i_drv_fops,
 	.name			= "sun4i-drm",
 	.desc			= "Allwinner sun4i Display Engine",
@@ -67,6 +76,93 @@ int drm_sun4i_gem_dumb_create(struct drm_file *file_priv,
 	args->pitch = ALIGN(DIV_ROUND_UP(args->width * args->bpp, 8), 2);
 
 	return drm_gem_cma_dumb_create_internal(file_priv, drm, args);
+}
+
+int drm_sun4i_gem_create_tiled(struct drm_device *drm, void *data,
+			       struct drm_file *file_priv)
+{
+	struct drm_sun4i_gem_create_tiled *args = data;
+	struct drm_gem_cma_object *cma_obj;
+	struct drm_gem_object *gem_obj;
+	uint32_t luma_stride, chroma_stride;
+	uint32_t luma_height, chroma_height;
+	int ret;
+
+	if (!sun4i_format_supports_tiling(args->format))
+		return -EINVAL;
+
+	memset(args->pitches, 0, sizeof(args->pitches));
+	memset(args->offsets, 0, sizeof(args->offsets));
+
+	/* Stride and height are aligned to 32 bytes for MB32 tiled format. */
+	luma_stride = ALIGN(args->width, 32);
+	luma_height = ALIGN(args->height, 32);
+
+	if (sun4i_format_is_semiplanar(args->format)) {
+		chroma_stride = luma_stride;
+
+		if (sun4i_format_is_yuv420(args->format))
+			chroma_height = ALIGN(DIV_ROUND_UP(args->height, 2), 32);
+		else if (sun4i_format_is_yuv422(args->format))
+			chroma_height = luma_height;
+		else
+			return -EINVAL;
+
+		args->pitches[0] = luma_stride;
+		args->pitches[1] = chroma_stride;
+
+		args->offsets[0] = 0;
+		args->offsets[1] = luma_stride * luma_height;
+
+		args->size = luma_stride * luma_height +
+			     chroma_stride * chroma_height;
+	} else if (sun4i_format_is_planar(args->format)) {
+		if (sun4i_format_is_yuv411(args->format)) {
+			chroma_stride = ALIGN(DIV_ROUND_UP(args->width, 4), 32);
+			chroma_height = luma_height;
+		} if (sun4i_format_is_yuv420(args->format)) {
+			chroma_stride = ALIGN(DIV_ROUND_UP(args->width, 2), 32);
+			chroma_height = ALIGN(DIV_ROUND_UP(args->height, 2), 32);
+		} else if (sun4i_format_is_yuv422(args->format)) {
+			chroma_stride = ALIGN(DIV_ROUND_UP(args->width, 2), 32);
+			chroma_height = luma_height;
+		} else {
+			return -EINVAL;
+		}
+
+		args->pitches[0] = luma_stride;
+		args->pitches[1] = chroma_stride;
+		args->pitches[2] = chroma_stride;
+
+		args->offsets[0] = 0;
+		args->offsets[1] = luma_stride * luma_height;
+		args->offsets[2] = luma_stride * luma_height +
+				   chroma_stride * chroma_height;
+
+		args->size = luma_stride * luma_height +
+			     chroma_stride * chroma_height * 2;
+	} else {
+		/* No support for packed formats in tiled mode. */
+		return -EINVAL;
+	}
+
+	cma_obj = drm_gem_cma_create(drm, args->size);
+	if (IS_ERR(cma_obj))
+		return PTR_ERR(cma_obj);
+
+	gem_obj = &cma_obj->base;
+
+	/*
+	 * allocate a id of idr table where the obj is registered
+	 * and handle has the id what user can see.
+	 */
+	ret = drm_gem_handle_create(file_priv, gem_obj, &args->handle);
+	/* drop reference from allocate - handle holds it now. */
+	drm_gem_object_put_unlocked(gem_obj);
+	if (ret)
+		return ret;
+
+	return PTR_ERR_OR_ZERO(cma_obj);
 }
 
 static void sun4i_remove_framebuffers(void)
