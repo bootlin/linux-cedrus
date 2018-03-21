@@ -207,6 +207,6 @@ int sun4i_backend_update_layer_zpos(struct sun4i_backend *backend,
 				    int layer, struct drm_plane *plane);
 void sun4i_backend_disable_layer_frontend(struct sun4i_backend *backend,
 					  int layer);
-bool sun4i_backend_format_is_supported(uint32_t fmt);
+bool sun4i_backend_format_is_supported(uint32_t fmt, uint64_t modifier);
 
 #endif /* _SUN4I_BACKEND_H_ */
