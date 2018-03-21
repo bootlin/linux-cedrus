@@ -128,19 +128,37 @@ static const struct drm_plane_funcs sun4i_backend_layer_funcs = {
 	.update_plane		= drm_atomic_helper_update_plane,
 };
 
-static const uint32_t sun4i_backend_layer_formats[] = {
-	DRM_FORMAT_ARGB8888,
+static const uint32_t sun4i_layer_formats[] = {
+	/* RGB */
 	DRM_FORMAT_ARGB4444,
+	DRM_FORMAT_RGBA4444,
 	DRM_FORMAT_ARGB1555,
 	DRM_FORMAT_RGBA5551,
-	DRM_FORMAT_RGBA4444,
-	DRM_FORMAT_RGB888,
 	DRM_FORMAT_RGB565,
-	DRM_FORMAT_UYVY,
-	DRM_FORMAT_VYUY,
+	DRM_FORMAT_RGB888,
 	DRM_FORMAT_XRGB8888,
+	DRM_FORMAT_BGRX8888,
+	DRM_FORMAT_ARGB8888,
+	/* YUV444 */
+	DRM_FORMAT_YUV444,
+	DRM_FORMAT_YVU444,
+	/* YUV422 */
 	DRM_FORMAT_YUYV,
 	DRM_FORMAT_YVYU,
+	DRM_FORMAT_UYVY,
+	DRM_FORMAT_VYUY,
+	DRM_FORMAT_NV16,
+	DRM_FORMAT_NV61,
+	DRM_FORMAT_YUV422,
+	DRM_FORMAT_YVU422,
+	/* YUV420 */
+	DRM_FORMAT_NV12,
+	DRM_FORMAT_NV21,
+	DRM_FORMAT_YUV420,
+	DRM_FORMAT_YVU420,
+	/* YUV411 */
+	DRM_FORMAT_YUV411,
+	DRM_FORMAT_YVU411,
 };
 
 static struct sun4i_layer *sun4i_layer_init_one(struct drm_device *drm,
@@ -157,8 +175,8 @@ static struct sun4i_layer *sun4i_layer_init_one(struct drm_device *drm,
 	/* possible crtcs are set later */
 	ret = drm_universal_plane_init(drm, &layer->plane, 0,
 				       &sun4i_backend_layer_funcs,
-				       sun4i_backend_layer_formats,
-				       ARRAY_SIZE(sun4i_backend_layer_formats),
+				       sun4i_layer_formats,
+				       ARRAY_SIZE(sun4i_layer_formats),
 				       NULL, type, NULL);
 	if (ret) {
 		dev_err(drm->dev, "Couldn't initialize layer\n");
