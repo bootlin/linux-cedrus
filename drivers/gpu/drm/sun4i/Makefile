@@ -4,6 +4,7 @@ sun4i-frontend-y		+= sun4i_frontend.o
 
 sun4i-drm-y			+= sun4i_drv.o
 sun4i-drm-y			+= sun4i_framebuffer.o
+sun4i-drm-y			+= sun4i_format.o
 
 sun4i-drm-hdmi-y		+= sun4i_hdmi_ddc_clk.o
 sun4i-drm-hdmi-y		+= sun4i_hdmi_enc.o
