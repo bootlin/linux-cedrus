@@ -183,6 +183,7 @@ extern "C" {
 #define DRM_FORMAT_MOD_VENDOR_QCOM    0x05
 #define DRM_FORMAT_MOD_VENDOR_VIVANTE 0x06
 #define DRM_FORMAT_MOD_VENDOR_BROADCOM 0x07
+#define DRM_FORMAT_MOD_VENDOR_ALLWINNER 0x08
 /* add more to the end as needed */
 
 #define DRM_FORMAT_RESERVED	      ((1ULL << 56) - 1)
@@ -404,6 +405,15 @@ extern "C" {
  *   tiles) or right-to-left (odd rows of 4k tiles).
  */
 #define DRM_FORMAT_MOD_BROADCOM_VC4_T_TILED fourcc_mod_code(BROADCOM, 1)
+
+/*
+ * Allwinner "MB32" tiled format
+ *
+ * This is the primary layout coming out of the VPU, where pixels are tiled
+ * 32x32.
+ */
+#define DRM_FORMAT_MOD_ALLWINNER_MB32_TILED fourcc_mod_code(ALLWINNER, 1)
+
 
 #if defined(__cplusplus)
 }
