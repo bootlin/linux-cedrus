@@ -184,6 +184,39 @@ static int sun4i_backend_drm_format_to_layer(u32 format, u32 *mode)
 	return 0;
 }
 
+static const uint32_t sun4i_backend_formats[] = {
+	/* RGB */
+	DRM_FORMAT_ARGB4444,
+	DRM_FORMAT_RGBA4444,
+	DRM_FORMAT_ARGB1555,
+	DRM_FORMAT_RGBA5551,
+	DRM_FORMAT_RGB565,
+	DRM_FORMAT_RGB888,
+	DRM_FORMAT_XRGB8888,
+	DRM_FORMAT_BGRX8888,
+	DRM_FORMAT_ARGB8888,
+	/* YUV422 */
+	DRM_FORMAT_YUYV,
+	DRM_FORMAT_YVYU,
+	DRM_FORMAT_UYVY,
+	DRM_FORMAT_VYUY,
+};
+
+bool sun4i_backend_format_is_supported(uint32_t fmt)
+{
+	bool found = false;
+	unsigned int i;
+
+	for (i = 0; i < ARRAY_SIZE(sun4i_backend_formats); i++) {
+		if (sun4i_backend_formats[i] == fmt) {
+			found = true;
+			break;
+		}
+	}
+
+	return found;
+}
+
 int sun4i_backend_update_layer_coord(struct sun4i_backend *backend,
 				     int layer, struct drm_plane *plane)
 {
@@ -464,15 +497,28 @@ static bool sun4i_backend_plane_uses_frontend(struct drm_plane_state *state)
 {
 	struct sun4i_layer *layer = plane_to_sun4i_layer(state->plane);
 	struct sun4i_backend *backend = layer->backend;
+	struct drm_framebuffer *fb = state->fb;
 
 	if (IS_ERR(backend->frontend))
 		return false;
 
 	/*
+	 * Let's pretend that every format is either supported by the backend or
+	 * the frontend. This is not true in practice, as some tiling modes are
+	 * not supported by either. There is still room to check this later in
+	 * the atomic check process.
+	 */
+	if (!sun4i_backend_format_is_supported(fb->format->format))
+		return true;
+
+	/*
 	 * TODO: Don't use the frontend for x2/x4 scaling and allow RGB formats
 	 * with an alpha component then.
 	 */
-	return sun4i_backend_plane_uses_scaler(state);
+	if (sun4i_backend_plane_uses_scaler(state))
+		return true;
+
+	return false;
 }
 
 static void sun4i_backend_atomic_begin(struct sunxi_engine *engine,
