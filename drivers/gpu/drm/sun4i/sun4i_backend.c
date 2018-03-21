@@ -147,10 +147,13 @@ static const uint32_t sun4i_backend_formats[] = {
 	DRM_FORMAT_VYUY,
 };
 
-bool sun4i_backend_format_is_supported(uint32_t fmt)
+bool sun4i_backend_format_is_supported(uint32_t fmt, uint64_t modifier)
 {
 	bool found = false;
 	unsigned int i;
+
+	if (modifier == DRM_FORMAT_MOD_ALLWINNER_MB32_TILED)
+		return false;
 
 	for (i = 0; i < ARRAY_SIZE(sun4i_backend_formats); i++) {
 		if (sun4i_backend_formats[i] == fmt) {
@@ -437,7 +440,8 @@ static bool sun4i_backend_plane_uses_frontend(struct drm_plane_state *state)
 	 * not supported by either. There is still room to check this later in
 	 * the atomic check process.
 	 */
-	if (!sun4i_backend_format_is_supported(fb->format->format))
+	if (!sun4i_backend_format_is_supported(fb->format->format,
+					       fb->modifier))
 		return true;
 
 	/*
@@ -489,7 +493,7 @@ static int sun4i_backend_atomic_check(struct sunxi_engine *engine,
 		struct drm_format_name_buf format_name;
 
 		if (sun4i_backend_plane_uses_frontend(plane_state)) {
-			if (!sun4i_frontend_format_is_supported(fb->format->format)) {
+			if (!sun4i_frontend_plane_check(plane_state)) {
 				DRM_DEBUG_DRIVER("Frontend plane check failed\n");
 				return -EINVAL;
 			}
