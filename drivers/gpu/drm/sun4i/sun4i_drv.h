@@ -26,5 +26,7 @@ struct sun4i_drv {
 int drm_sun4i_gem_dumb_create(struct drm_file *file_priv,
 			      struct drm_device *drm,
 			      struct drm_mode_create_dumb *args);
+int drm_sun4i_gem_create_tiled(struct drm_device *dev, void *data,
+			       struct drm_file *file_priv);
 
 #endif /* _SUN4I_DRV_H_ */
