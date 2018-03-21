@@ -551,6 +551,11 @@ static int sun4i_backend_atomic_check(struct sunxi_engine *engine,
 		struct drm_format_name_buf format_name;
 
 		if (sun4i_backend_plane_uses_frontend(plane_state)) {
+			if (!sun4i_frontend_format_is_supported(fb->format->format)) {
+				DRM_DEBUG_DRIVER("Frontend plane check failed\n");
+				return -EINVAL;
+			}
+
 			DRM_DEBUG_DRIVER("Using the frontend for plane %d\n",
 					 plane->index);
 
