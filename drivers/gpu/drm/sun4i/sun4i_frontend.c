@@ -99,16 +99,56 @@ void sun4i_frontend_update_buffer(struct sun4i_frontend *frontend,
 	width = state->src_w >> 16;
 	height = state->src_h >> 16;
 
-	regmap_write(frontend->regs, SUN4I_FRONTEND_LINESTRD0_REG,
-		     fb->pitches[0]);
+	if (fb->modifier == DRM_FORMAT_MOD_ALLWINNER_MB32_TILED) {
+		/*
+		 * In MB32 tiled mode, the stride is defined as the distance
+		 * between the start of the end line of the current tile and
+		 * the start of the first line in the next vertical tile.
+		 *
+		 * Tiles are represented linearly in memory, thus the end line
+		 * of current tile starts at: 31 * 32 (31 lines of 32 cols),
+		 * the next vertical tile starts at: 32-bit-aligned-width * 32
+		 * and the distance is: 32 * (32-bit-aligned-width - 31).
+		 */
 
-	if (drm_format_num_planes(format) > 1)
-		regmap_write(frontend->regs, SUN4I_FRONTEND_LINESTRD1_REG,
-			     fb->pitches[1]);
+		stride = (fb->pitches[0] - 31) * 32;
+		regmap_write(frontend->regs, SUN4I_FRONTEND_LINESTRD0_REG,
+			     stride);
 
-	if (drm_format_num_planes(format) > 2)
-		regmap_write(frontend->regs, SUN4I_FRONTEND_LINESTRD2_REG,
-			     fb->pitches[2]);
+		/* Offset of the bottom-right point in the end tile. */
+		offset = (width + (32 - 1)) & (32 - 1);
+		regmap_write(frontend->regs, SUN4I_FRONTEND_TB_OFF0_REG,
+			     SUN4I_FRONTEND_TB_OFF_X1(offset));
+
+		if (drm_format_num_planes(format) > 1) {
+			stride = (fb->pitches[1] - 31) * 32;
+			regmap_write(frontend->regs, SUN4I_FRONTEND_LINESTRD1_REG,
+				     stride);
+
+			regmap_write(frontend->regs, SUN4I_FRONTEND_TB_OFF1_REG,
+				     SUN4I_FRONTEND_TB_OFF_X1(offset));
+		}
+
+		if (drm_format_num_planes(format) > 2) {
+			stride = (fb->pitches[2] - 31) * 32;
+			regmap_write(frontend->regs, SUN4I_FRONTEND_LINESTRD2_REG,
+				     stride);
+
+			regmap_write(frontend->regs, SUN4I_FRONTEND_TB_OFF2_REG,
+				     SUN4I_FRONTEND_TB_OFF_X1(offset));
+		}
+	} else {
+		regmap_write(frontend->regs, SUN4I_FRONTEND_LINESTRD0_REG,
+			     fb->pitches[0]);
+
+		if (drm_format_num_planes(format) > 1)
+			regmap_write(frontend->regs, SUN4I_FRONTEND_LINESTRD1_REG,
+				     fb->pitches[1]);
+
+		if (drm_format_num_planes(format) > 2)
+			regmap_write(frontend->regs, SUN4I_FRONTEND_LINESTRD2_REG,
+				     fb->pitches[2]);
+	}
 
 	/* Set the physical address of the buffer in memory */
 	paddr = drm_fb_cma_get_gem_addr(fb, state, 0);
@@ -155,14 +195,22 @@ static int sun4i_frontend_drm_format_to_input_fmt(uint32_t fmt, u32 *val)
 	return 0;
 }
 
-static int sun4i_frontend_drm_format_to_input_mode(uint32_t fmt, u32 *val)
+static int sun4i_frontend_drm_format_to_input_mode(uint32_t fmt, u32 *val,
+						   uint64_t modifier)
 {
+	bool tiled = modifier == DRM_FORMAT_MOD_ALLWINNER_MB32_TILED;
+
+	if (tiled && !sun4i_format_supports_tiling(fmt))
+		return -EINVAL;
+
 	if (sun4i_format_is_packed(fmt))
 		*val = SUN4I_FRONTEND_INPUT_FMT_DATA_MOD_PACKED;
 	else if (sun4i_format_is_semiplanar(fmt))
-		*val = SUN4I_FRONTEND_INPUT_FMT_DATA_MOD_SEMIPLANAR;
+		*val = tiled ? SUN4I_FRONTEND_INPUT_FMT_DATA_MOD_MB32_SEMIPLANAR
+			     : SUN4I_FRONTEND_INPUT_FMT_DATA_MOD_SEMIPLANAR;
 	else if (sun4i_format_is_planar(fmt))
-		*val = SUN4I_FRONTEND_INPUT_FMT_DATA_MOD_PLANAR;
+		*val = tiled ? SUN4I_FRONTEND_INPUT_FMT_DATA_MOD_MB32_PLANAR
+			     : SUN4I_FRONTEND_INPUT_FMT_DATA_MOD_PLANAR;
 	else
 		return -EINVAL;
 
@@ -268,7 +316,7 @@ static const uint32_t sun4i_frontend_formats[] = {
 	DRM_FORMAT_YVU411,
 };
 
-bool sun4i_frontend_format_is_supported(uint32_t fmt)
+bool sun4i_frontend_format_is_supported(uint32_t fmt, uint64_t modifier)
 {
 	bool found = false;
 	unsigned int i;
@@ -282,6 +330,31 @@ bool sun4i_frontend_format_is_supported(uint32_t fmt)
 
 	if (!found)
 		return false;
+
+	if (modifier == DRM_FORMAT_MOD_ALLWINNER_MB32_TILED)
+		return sun4i_format_supports_tiling(fmt);
+
+	return true;
+}
+
+bool sun4i_frontend_plane_check(struct drm_plane_state *state)
+{
+	struct drm_framebuffer *fb = state->fb;
+	uint32_t format = fb->format->format;
+	uint32_t width = state->src_w >> 16;
+	uint64_t modifier = fb->modifier;
+	bool supported;
+
+	supported = sun4i_frontend_format_is_supported(format, modifier);
+	if (!supported)
+		return false;
+
+	/* Width is required to be even for MB32 tiled format. */
+	if (modifier == DRM_FORMAT_MOD_ALLWINNER_MB32_TILED &&
+	    (width % 2) != 0) {
+		DRM_DEBUG_DRIVER("MB32 tiled format requires an even width\n");
+		return false;
+	}
 
 	return true;
 }
@@ -320,7 +393,8 @@ int sun4i_frontend_update_formats(struct sun4i_frontend *frontend,
 		return ret;
 	}
 
-	ret = sun4i_frontend_drm_format_to_input_mode(format, &in_mod_val);
+	ret = sun4i_frontend_drm_format_to_input_mode(format, &in_mod_val,
+						      fb->modifier);
 	if (ret) {
 		DRM_DEBUG_DRIVER("Invalid input mode\n");
 		return ret;

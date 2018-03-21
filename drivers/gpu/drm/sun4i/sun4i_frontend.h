@@ -134,7 +134,8 @@ void sun4i_frontend_update_coord(struct sun4i_frontend *frontend,
 				 struct drm_plane *plane);
 int sun4i_frontend_update_formats(struct sun4i_frontend *frontend,
 				  struct drm_plane *plane, uint32_t out_fmt);
-bool sun4i_frontend_format_is_supported(uint32_t fmt);
+bool sun4i_frontend_format_is_supported(uint32_t fmt, uint64_t modifier);
+bool sun4i_frontend_plane_check(struct drm_plane_state *plane_state);
 bool sun4i_frontend_format_chroma_requires_swap(uint32_t fmt);
 
 #endif /* _SUN4I_FRONTEND_H_ */
