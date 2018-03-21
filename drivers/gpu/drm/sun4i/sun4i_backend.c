@@ -312,8 +312,10 @@ int sun4i_backend_update_layer_formats(struct sun4i_backend *backend,
 }
 
 int sun4i_backend_update_layer_frontend(struct sun4i_backend *backend,
-					int layer, uint32_t fmt)
+					int layer, struct drm_plane *plane,
+					uint32_t fmt)
 {
+	bool interlaced = false;
 	u32 val;
 	int ret;
 
@@ -323,10 +325,23 @@ int sun4i_backend_update_layer_frontend(struct sun4i_backend *backend,
 		return ret;
 	}
 
+	/* Clear the YUV mode */
+	regmap_update_bits(backend->engine.regs,
+			   SUN4I_BACKEND_ATTCTL_REG0(layer),
+			   SUN4I_BACKEND_ATTCTL_REG0_LAY_YUVEN, 0);
+
 	regmap_update_bits(backend->engine.regs,
 			   SUN4I_BACKEND_ATTCTL_REG0(layer),
 			   SUN4I_BACKEND_ATTCTL_REG0_LAY_VDOEN,
 			   SUN4I_BACKEND_ATTCTL_REG0_LAY_VDOEN);
+
+	if (plane->state->crtc)
+		interlaced = plane->state->crtc->state->adjusted_mode.flags
+			& DRM_MODE_FLAG_INTERLACE;
+
+	regmap_update_bits(backend->engine.regs, SUN4I_BACKEND_MODCTL_REG,
+			   SUN4I_BACKEND_MODCTL_ITLMOD_EN,
+			   interlaced ? SUN4I_BACKEND_MODCTL_ITLMOD_EN : 0);
 
 	regmap_update_bits(backend->engine.regs,
 			   SUN4I_BACKEND_ATTCTL_REG1(layer),
