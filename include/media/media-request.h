@@ -1,0 +1,244 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Media device request objects
+ *
+ * Copyright 2018 Cisco Systems, Inc. and/or its affiliates. All rights reserved.
+ * Copyright (C) 2018 Intel Corporation
+ *
+ * Author: Hans Verkuil <hans.verkuil@cisco.com>
+ * Author: Sakari Ailus <sakari.ailus@linux.intel.com>
+ */
+
+#ifndef MEDIA_REQUEST_H
+#define MEDIA_REQUEST_H
+
+#include <linux/list.h>
+#include <linux/slab.h>
+#include <linux/spinlock.h>
+#include <linux/atomic.h>
+
+#include <media/media-device.h>
+
+/**
+ * enum media_request_state - media request state
+ *
+ * @MEDIA_REQUEST_STATE_IDLE:		Idle
+ * @MEDIA_REQUEST_STATE_VALIDATING:	Validating the request, no state changes
+ *					allowed
+ * @MEDIA_REQUEST_STATE_QUEUED:		Queued
+ * @MEDIA_REQUEST_STATE_COMPLETE:	Completed, the request is done
+ * @MEDIA_REQUEST_STATE_CLEANING:	Cleaning, the request is being re-inited
+ */
+enum media_request_state {
+	MEDIA_REQUEST_STATE_IDLE,
+	MEDIA_REQUEST_STATE_VALIDATING,
+	MEDIA_REQUEST_STATE_QUEUED,
+	MEDIA_REQUEST_STATE_COMPLETE,
+	MEDIA_REQUEST_STATE_CLEANING,
+};
+
+struct media_request_object;
+
+/**
+ * struct media_request - Media device request
+ * @mdev: Media device this request belongs to
+ * @kref: Reference count
+ * @debug_str: Prefix for debug messages (process name:fd)
+ * @state: The state of the request
+ * @objects: List of @struct media_request_object request objects
+ * @num_objects: The number of objects in the request
+ * @num_incompleted_objects: The number of incomplete objects in the request
+ * @poll_wait: Wait queue for poll
+ * @lock: Serializes access to this struct
+ */
+struct media_request {
+	struct media_device *mdev;
+	struct kref kref;
+	char debug_str[TASK_COMM_LEN + 11];
+	atomic_t state;
+	struct list_head objects;
+	unsigned int num_incomplete_objects;
+	struct wait_queue_head poll_wait;
+	spinlock_t lock;
+};
+
+#ifdef CONFIG_MEDIA_CONTROLLER
+
+/**
+ * media_request_get - Get the media request
+ *
+ * @req: The request
+ *
+ * Get the media request.
+ */
+static inline void media_request_get(struct media_request *req)
+{
+	kref_get(&req->kref);
+}
+
+/**
+ * media_request_put - Put the media request
+ *
+ * @req: The request
+ *
+ * Put the media request. The media request will be released
+ * when the refcount reaches 0.
+ */
+void media_request_put(struct media_request *req);
+
+/**
+ * media_request_alloc - Allocate the media request
+ *
+ * @mdev: Media device this request belongs to
+ * @alloc: Store the request's file descriptor in this struct
+ *
+ * Allocated the media request and put the fd in @alloc->fd.
+ */
+int media_request_alloc(struct media_device *mdev,
+			struct media_request_alloc *alloc);
+
+#else
+
+static inline void media_request_get(struct media_request *req)
+{
+}
+
+static inline void media_request_put(struct media_request *req)
+{
+}
+
+#endif
+
+/**
+ * struct media_request_object_ops - Media request object operations
+ * @prepare: Validate and prepare the request object, optional.
+ * @unprepare: Unprepare the request object, optional.
+ * @queue: Queue the request object, optional.
+ * @unbind: Unbind the request object, optional.
+ * @release: Release the request object, required.
+ */
+struct media_request_object_ops {
+	int (*prepare)(struct media_request_object *object);
+	void (*unprepare)(struct media_request_object *object);
+	void (*queue)(struct media_request_object *object);
+	void (*unbind)(struct media_request_object *object);
+	void (*release)(struct media_request_object *object);
+};
+
+/**
+ * struct media_request_object - An opaque object that belongs to a media
+ *				 request
+ *
+ * @ops: object's operations
+ * @priv: object's priv pointer
+ * @req: the request this object belongs to (can be NULL)
+ * @list: List entry of the object for @struct media_request
+ * @kref: Reference count of the object, acquire before releasing req->lock
+ * @completed: If true, then this object was completed.
+ *
+ * An object related to the request. This struct is embedded in the
+ * larger object data.
+ */
+struct media_request_object {
+	const struct media_request_object_ops *ops;
+	void *priv;
+	struct media_request *req;
+	struct list_head list;
+	struct kref kref;
+	bool completed;
+};
+
+#ifdef CONFIG_MEDIA_CONTROLLER
+
+/**
+ * media_request_object_get - Get a media request object
+ *
+ * @obj: The object
+ *
+ * Get a media request object.
+ */
+static inline void media_request_object_get(struct media_request_object *obj)
+{
+	kref_get(&obj->kref);
+}
+
+/**
+ * media_request_object_put - Put a media request object
+ *
+ * @obj: The object
+ *
+ * Put a media request object. Once all references are gone, the
+ * object's memory is released.
+ */
+void media_request_object_put(struct media_request_object *obj);
+
+/**
+ * media_request_object_init - Initialise a media request object
+ *
+ * Initialise a media request object. The object will be released using the
+ * release callback of the ops once it has no references (this function
+ * initialises references to one).
+ */
+void media_request_object_init(struct media_request_object *obj);
+
+/**
+ * media_request_object_bind - Bind a media request object to a request
+ */
+int media_request_object_bind(struct media_request *req,
+			      const struct media_request_object_ops *ops,
+			      void *priv,
+			      struct media_request_object *obj);
+
+/**
+ * media_request_object_unbind - Unbind a media request object
+ *
+ * @obj: The object
+ *
+ * Unbind the media request object from the request.
+ */
+void media_request_object_unbind(struct media_request_object *obj);
+
+/**
+ * media_request_object_complete - Mark the media request object as complete
+ *
+ * @obj: The object
+ *
+ * Mark the media request object as complete.
+ */
+void media_request_object_complete(struct media_request_object *obj);
+
+#else
+
+static inline void media_request_object_get(struct media_request_object *obj)
+{
+}
+
+static inline void media_request_object_put(struct media_request_object *obj)
+{
+}
+
+static inline void media_request_object_init(struct media_request_object *obj)
+{
+	obj->ops = NULL;
+	obj->req = NULL;
+}
+
+static inline int media_request_object_bind(struct media_request *req,
+			       const struct media_request_object_ops *ops,
+			       void *priv,
+			       struct media_request_object *obj)
+{
+	return 0;
+}
+
+static inline void media_request_object_unbind(struct media_request_object *obj)
+{
+}
+
+static inline void media_request_object_complete(struct media_request_object *obj)
+{
+}
+
+#endif
+
+#endif
