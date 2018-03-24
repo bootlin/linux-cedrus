@@ -19,6 +19,7 @@
 #ifndef _MEDIA_DEVICE_H
 #define _MEDIA_DEVICE_H
 
+#include <linux/anon_inodes.h>
 #include <linux/list.h>
 #include <linux/mutex.h>
 
@@ -27,6 +28,7 @@
 
 struct ida;
 struct device;
+struct media_device;
 
 /**
  * struct media_entity_notify - Media Entity Notify
@@ -50,10 +52,16 @@ struct media_entity_notify {
  * struct media_device_ops - Media device operations
  * @link_notify: Link state change notification callback. This callback is
  *		 called with the graph_mutex held.
+ * @req_alloc: Allocate a request
+ * @req_free: Free a request
+ * @req_queue: Queue a request
  */
 struct media_device_ops {
 	int (*link_notify)(struct media_link *link, u32 flags,
 			   unsigned int notification);
+	struct media_request *(*req_alloc)(struct media_device *mdev);
+	void (*req_free)(struct media_request *req);
+	int (*req_queue)(struct media_request *req);
 };
 
 /**
@@ -88,6 +96,8 @@ struct media_device_ops {
  * @disable_source: Disable Source Handler function pointer
  *
  * @ops:	Operation handler callbacks
+ * @req_lock:	Serialise access to requests
+ * @req_queue_mutex: Serialise validating and queueing requests
  *
  * This structure represents an abstract high-level media device. It allows easy
  * access to entities and provides basic media device-level support. The
@@ -158,6 +168,9 @@ struct media_device {
 	void (*disable_source)(struct media_entity *entity);
 
 	const struct media_device_ops *ops;
+
+	spinlock_t req_lock;
+	struct mutex req_queue_mutex;
 };
 
 /* We don't need to include pci.h or usb.h here */
