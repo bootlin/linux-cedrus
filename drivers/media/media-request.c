@@ -207,6 +207,53 @@ static const struct file_operations request_fops = {
 	.release = media_request_close,
 };
 
+/**
+ * media_request_find - Find a request based on the file descriptor
+ * @mdev: The media device
+ * @request: The request file handle
+ *
+ * Find and return the request associated with the given file descriptor, or
+ * an error if no such request exists.
+ *
+ * When the function returns a request it increases its reference count. The
+ * caller is responsible for releasing the reference by calling
+ * media_request_put() on the request.
+ */
+struct media_request *
+media_request_find(struct media_device *mdev, int request_fd)
+{
+	struct file *filp;
+	struct media_request *req;
+
+	if (!mdev || !mdev->ops || !mdev->ops->req_queue)
+		return ERR_PTR(-EPERM);
+
+	filp = fget(request_fd);
+	if (!filp)
+		return ERR_PTR(-ENOENT);
+
+	if (filp->f_op != &request_fops)
+		goto err_fput;
+	req = filp->private_data;
+	media_request_get(req);
+
+	if (req->mdev != mdev)
+		goto err_kref_put;
+
+	fput(filp);
+
+	return req;
+
+err_kref_put:
+	media_request_put(req);
+
+err_fput:
+	fput(filp);
+
+	return ERR_PTR(-ENOENT);
+}
+EXPORT_SYMBOL_GPL(media_request_find);
+
 int media_request_alloc(struct media_device *mdev,
 			struct media_request_alloc *alloc)
 {

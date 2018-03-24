@@ -59,6 +59,9 @@ static inline void media_request_get(struct media_request *req)
 void media_request_put(struct media_request *req);
 void media_request_cancel(struct media_request *req);
 
+struct media_request *
+media_request_find(struct media_device *mdev, int request_fd);
+
 int media_request_alloc(struct media_device *mdev,
 			struct media_request_alloc *alloc);
 #else
@@ -72,6 +75,12 @@ static inline void media_request_put(struct media_request *req)
 
 static inline void media_request_cancel(struct media_request *req)
 {
+}
+
+static inline struct media_request *
+media_request_find(struct media_device *mdev, int request_fd)
+{
+	return ERR_PTR(-ENOENT);
 }
 
 #endif
@@ -173,6 +182,7 @@ static inline void media_request_object_unbind(struct media_request_object *obj)
 static inline void media_request_object_complete(struct media_request_object *obj)
 {
 }
+
 #endif
 
 #endif
