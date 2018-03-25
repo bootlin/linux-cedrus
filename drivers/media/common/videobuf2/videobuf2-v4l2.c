@@ -544,7 +544,7 @@ int vb2_prepare_buf(struct vb2_queue *q, struct v4l2_buffer *b)
 
 	ret = vb2_queue_or_prepare_buf(q, b, "prepare_buf");
 
-	return ret ? ret : vb2_core_prepare_buf(q, b->index, b);
+	return ret ? ret : vb2_core_prepare_buf(q, b->index, b, NULL);
 }
 EXPORT_SYMBOL_GPL(vb2_prepare_buf);
 
@@ -612,7 +612,7 @@ int vb2_qbuf(struct vb2_queue *q, struct v4l2_buffer *b)
 	}
 
 	ret = vb2_queue_or_prepare_buf(q, b, "qbuf");
-	return ret ? ret : vb2_core_qbuf(q, b->index, b);
+	return ret ? ret : vb2_core_qbuf(q, b->index, b, NULL);
 }
 EXPORT_SYMBOL_GPL(vb2_qbuf);
 
