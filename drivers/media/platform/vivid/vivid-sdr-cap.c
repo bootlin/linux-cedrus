@@ -114,6 +114,10 @@ static void vivid_thread_sdr_cap_tick(struct vivid_dev *dev)
 
 	if (sdr_cap_buf) {
 		sdr_cap_buf->vb.sequence = dev->sdr_cap_seq_count;
+		v4l2_ctrl_request_setup(sdr_cap_buf->vb.vb2_buf.req_obj.req,
+					&dev->ctrl_hdl_sdr_cap);
+		v4l2_ctrl_request_complete(sdr_cap_buf->vb.vb2_buf.req_obj.req,
+					   &dev->ctrl_hdl_sdr_cap);
 		vivid_sdr_cap_process(dev, sdr_cap_buf);
 		sdr_cap_buf->vb.vb2_buf.timestamp =
 			ktime_get_ns() + dev->time_wrap_offset;
@@ -284,6 +288,8 @@ static int sdr_cap_start_streaming(struct vb2_queue *vq, unsigned count)
 
 		list_for_each_entry_safe(buf, tmp, &dev->sdr_cap_active, list) {
 			list_del(&buf->list);
+			v4l2_ctrl_request_complete(buf->vb.vb2_buf.req_obj.req,
+						   &dev->ctrl_hdl_sdr_cap);
 			vb2_buffer_done(&buf->vb.vb2_buf,
 					VB2_BUF_STATE_QUEUED);
 		}
@@ -305,6 +311,8 @@ static void sdr_cap_stop_streaming(struct vb2_queue *vq)
 		buf = list_entry(dev->sdr_cap_active.next,
 				struct vivid_buffer, list);
 		list_del(&buf->list);
+		v4l2_ctrl_request_complete(buf->vb.vb2_buf.req_obj.req,
+					   &dev->ctrl_hdl_sdr_cap);
 		vb2_buffer_done(&buf->vb.vb2_buf, VB2_BUF_STATE_ERROR);
 	}
 
