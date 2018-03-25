@@ -131,6 +131,23 @@ static inline void media_request_object_get(struct media_request_object *obj)
 void media_request_object_put(struct media_request_object *obj);
 
 /**
+ * media_request_object_find - Find an object in a request
+ *
+ * @ops: Find an object with this ops value, may be NULL.
+ * @priv: Find an object with this priv value, may be NULL.
+ *
+ * At least one of @ops and @priv must be non-NULL. If one of
+ * these is NULL, then skip checking for that field.
+ *
+ * Returns NULL if not found or the object (the refcount is increased
+ * in that case).
+ */
+struct media_request_object *
+media_request_object_find(struct media_request *req,
+			  const struct media_request_object_ops *ops,
+			  void *priv);
+
+/**
  * media_request_object_init - Initialise a media request object
  *
  * Initialise a media request object. The object will be released using the
@@ -160,6 +177,14 @@ static inline void media_request_object_get(struct media_request_object *obj)
 
 static inline void media_request_object_put(struct media_request_object *obj)
 {
+}
+
+static inline struct media_request_object *
+media_request_object_find(struct media_request *req,
+			  const struct media_request_object_ops *ops,
+			  void *priv)
+{
+	return NULL;
 }
 
 static inline void media_request_object_init(struct media_request_object *obj)
