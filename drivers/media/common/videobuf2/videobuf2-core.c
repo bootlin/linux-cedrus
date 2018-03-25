@@ -930,6 +930,14 @@ void vb2_buffer_done(struct vb2_buffer *vb, enum vb2_buffer_state state)
 		vb->state = state;
 	}
 	atomic_dec(&q->owned_by_drv_count);
+
+	if (vb->req_obj.req) {
+		/* This is not supported at the moment */
+		WARN_ON(state == VB2_BUF_STATE_REQUEUEING);
+		media_request_object_unbind(&vb->req_obj);
+		media_request_object_put(&vb->req_obj);
+	}
+
 	spin_unlock_irqrestore(&q->done_lock, flags);
 
 	trace_vb2_buf_done(q, vb);
@@ -1276,10 +1284,65 @@ static int __buf_prepare(struct vb2_buffer *vb, const void *pb)
 	return 0;
 }
 
-int vb2_core_prepare_buf(struct vb2_queue *q, unsigned int index, void *pb)
+static int vb2_req_prepare(struct media_request_object *obj)
+{
+	struct vb2_buffer *vb = container_of(obj, struct vb2_buffer, req_obj);
+	int ret;
+
+	if (WARN_ON(vb->state != VB2_BUF_STATE_IN_REQUEST))
+		return -EINVAL;
+
+	ret = __buf_prepare(vb, NULL);
+	if (ret)
+		vb->state = VB2_BUF_STATE_IN_REQUEST;
+	return ret;
+}
+
+static void __vb2_dqbuf(struct vb2_buffer *vb);
+static void vb2_req_unprepare(struct media_request_object *obj)
+{
+	struct vb2_buffer *vb = container_of(obj, struct vb2_buffer, req_obj);
+
+	__vb2_dqbuf(vb);
+	vb->state = VB2_BUF_STATE_IN_REQUEST;
+	WARN_ON(!vb->req_obj.req);
+}
+
+int vb2_core_qbuf(struct vb2_queue *q, unsigned int index, void *pb,
+		  struct media_request *req);
+
+static void vb2_req_queue(struct media_request_object *obj)
+{
+	struct vb2_buffer *vb = container_of(obj, struct vb2_buffer, req_obj);
+
+	vb2_core_qbuf(vb->vb2_queue, vb->index, NULL, NULL);
+}
+
+static void vb2_req_release(struct media_request_object *obj)
+{
+	struct vb2_buffer *vb = container_of(obj, struct vb2_buffer, req_obj);
+
+	if (vb->state == VB2_BUF_STATE_IN_REQUEST)
+		vb->state = VB2_BUF_STATE_DEQUEUED;
+}
+
+static void vb2_req_cancel(struct media_request_object *obj)
+{
+	/* Nothing to do here, buffers are cancelled in __vb2_queue_cancel() */
+}
+
+static const struct media_request_object_ops vb2_core_req_ops = {
+	.prepare = vb2_req_prepare,
+	.unprepare = vb2_req_unprepare,
+	.queue = vb2_req_queue,
+	.cancel = vb2_req_cancel,
+	.release = vb2_req_release,
+};
+
+int vb2_core_prepare_buf(struct vb2_queue *q, unsigned int index, void *pb,
+			 struct media_request *req)
 {
 	struct vb2_buffer *vb;
-	int ret;
 
 	vb = q->bufs[index];
 	if (vb->state != VB2_BUF_STATE_DEQUEUED) {
@@ -1288,16 +1351,24 @@ int vb2_core_prepare_buf(struct vb2_queue *q, unsigned int index, void *pb)
 		return -EINVAL;
 	}
 
-	ret = __buf_prepare(vb, pb);
-	if (ret)
-		return ret;
+	if (req) {
+		vb->state = VB2_BUF_STATE_IN_REQUEST;
+		media_request_object_init(&vb->req_obj);
+		media_request_object_bind(req, &vb2_core_req_ops,
+					  q, &vb->req_obj);
+	} else {
+		int ret = __buf_prepare(vb, pb);
+
+		if (ret)
+			return ret;
+	}
 
 	/* Fill buffer information for the userspace */
 	call_void_bufop(q, fill_user_buffer, vb, pb);
 
 	dprintk(2, "prepare of buffer %d succeeded\n", vb->index);
 
-	return ret;
+	return 0;
 }
 EXPORT_SYMBOL_GPL(vb2_core_prepare_buf);
 
@@ -1364,12 +1435,26 @@ static int vb2_start_streaming(struct vb2_queue *q)
 	return ret;
 }
 
-int vb2_core_qbuf(struct vb2_queue *q, unsigned int index, void *pb)
+int vb2_core_qbuf(struct vb2_queue *q, unsigned int index, void *pb,
+		  struct media_request *req)
 {
 	struct vb2_buffer *vb;
 	int ret;
 
 	vb = q->bufs[index];
+
+	if (vb->state == VB2_BUF_STATE_DEQUEUED && req) {
+		vb->state = VB2_BUF_STATE_IN_REQUEST;
+		media_request_object_init(&vb->req_obj);
+		media_request_object_bind(req, &vb2_core_req_ops,
+					  q, &vb->req_obj);
+		/* Fill buffer information for the userspace */
+		if (pb)
+			call_void_bufop(q, fill_user_buffer, vb, pb);
+
+		dprintk(2, "qbuf of buffer %d succeeded\n", vb->index);
+		return 0;
+	}
 
 	switch (vb->state) {
 	case VB2_BUF_STATE_DEQUEUED:
@@ -1578,6 +1663,10 @@ static void __vb2_dqbuf(struct vb2_buffer *vb)
 			call_void_memop(vb, unmap_dmabuf, vb->planes[i].mem_priv);
 			vb->planes[i].dbuf_mapped = 0;
 		}
+	if (vb->req_obj.req) {
+		media_request_object_unbind(&vb->req_obj);
+		media_request_object_put(&vb->req_obj);
+	}
 }
 
 int vb2_core_dqbuf(struct vb2_queue *q, unsigned int *pindex, void *pb,
@@ -1691,6 +1780,9 @@ static void __vb2_queue_cancel(struct vb2_queue *q)
 	for (i = 0; i < q->num_buffers; ++i) {
 		struct vb2_buffer *vb = q->bufs[i];
 
+		if (vb->req_obj.req)
+			media_request_cancel(vb->req_obj.req);
+
 		if (vb->state == VB2_BUF_STATE_PREPARED ||
 		    vb->state == VB2_BUF_STATE_QUEUED) {
 			unsigned int plane;
@@ -1700,7 +1792,8 @@ static void __vb2_queue_cancel(struct vb2_queue *q)
 						vb->planes[plane].mem_priv);
 		}
 
-		if (vb->state != VB2_BUF_STATE_DEQUEUED) {
+		if (vb->state != VB2_BUF_STATE_DEQUEUED &&
+		    vb->state != VB2_BUF_STATE_IN_REQUEST) {
 			vb->state = VB2_BUF_STATE_PREPARED;
 			call_void_vb_qop(vb, buf_finish, vb);
 		}
@@ -2259,7 +2352,7 @@ static int __vb2_init_fileio(struct vb2_queue *q, int read)
 		 * Queue all buffers.
 		 */
 		for (i = 0; i < q->num_buffers; i++) {
-			ret = vb2_core_qbuf(q, i, NULL);
+			ret = vb2_core_qbuf(q, i, NULL, NULL);
 			if (ret)
 				goto err_reqbufs;
 			fileio->bufs[i].queued = 1;
@@ -2438,7 +2531,7 @@ static size_t __vb2_perform_fileio(struct vb2_queue *q, char __user *data, size_
 
 		if (copy_timestamp)
 			b->timestamp = ktime_get_ns();
-		ret = vb2_core_qbuf(q, index, NULL);
+		ret = vb2_core_qbuf(q, index, NULL, NULL);
 		dprintk(5, "vb2_dbuf result: %d\n", ret);
 		if (ret)
 			return ret;
@@ -2541,7 +2634,7 @@ static int vb2_thread(void *data)
 		if (copy_timestamp)
 			vb->timestamp = ktime_get_ns();
 		if (!threadio->stop)
-			ret = vb2_core_qbuf(q, vb->index, NULL);
+			ret = vb2_core_qbuf(q, vb->index, NULL, NULL);
 		call_void_qop(q, wait_prepare, q);
 		if (ret || threadio->stop)
 			break;
