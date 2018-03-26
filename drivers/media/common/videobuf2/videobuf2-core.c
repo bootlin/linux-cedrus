@@ -1339,6 +1339,18 @@ static const struct media_request_object_ops vb2_core_req_ops = {
 	.release = vb2_req_release,
 };
 
+bool vb2_core_request_has_buffers(struct media_request *req)
+{
+	struct media_request_object *obj;
+
+	list_for_each_entry(obj, &req->objects, list) {
+		if (obj->ops == &vb2_core_req_ops)
+			return true;
+	}
+	return false;
+}
+EXPORT_SYMBOL_GPL(vb2_core_request_has_buffers);
+
 int vb2_core_prepare_buf(struct vb2_queue *q, unsigned int index, void *pb,
 			 struct media_request *req)
 {
