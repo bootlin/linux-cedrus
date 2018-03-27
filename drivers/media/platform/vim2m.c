@@ -150,6 +150,7 @@ struct vim2m_dev {
 	spinlock_t		irqlock;
 
 	struct timer_list	timer;
+	struct work_struct	work_run;
 
 	struct v4l2_m2m_dev	*m2m_dev;
 };
@@ -392,9 +393,10 @@ static void device_run(void *priv)
 	schedule_irq(dev, ctx->transtime);
 }
 
-static void device_isr(struct timer_list *t)
+static void device_work(struct work_struct *w)
 {
-	struct vim2m_dev *vim2m_dev = from_timer(vim2m_dev, t, timer);
+	struct vim2m_dev *vim2m_dev =
+		container_of(w, struct vim2m_dev, work_run);
 	struct vim2m_ctx *curr_ctx;
 	struct vb2_v4l2_buffer *src_vb, *dst_vb;
 	unsigned long flags;
@@ -424,6 +426,13 @@ static void device_isr(struct timer_list *t)
 	} else {
 		device_run(curr_ctx);
 	}
+}
+
+static void device_isr(struct timer_list *t)
+{
+	struct vim2m_dev *vim2m_dev = from_timer(vim2m_dev, t, timer);
+
+	schedule_work(&vim2m_dev->work_run);
 }
 
 /*
@@ -806,6 +815,7 @@ static void vim2m_stop_streaming(struct vb2_queue *q)
 	struct vb2_v4l2_buffer *vbuf;
 	unsigned long flags;
 
+	flush_scheduled_work();
 	for (;;) {
 		if (V4L2_TYPE_IS_OUTPUT(q->type))
 			vbuf = v4l2_m2m_src_buf_remove(ctx->fh.m2m_ctx);
@@ -1011,6 +1021,7 @@ static int vim2m_probe(struct platform_device *pdev)
 	vfd = &dev->vfd;
 	vfd->lock = &dev->dev_mutex;
 	vfd->v4l2_dev = &dev->v4l2_dev;
+	INIT_WORK(&dev->work_run, device_work);
 
 #ifdef CONFIG_MEDIA_CONTROLLER
 	dev->mdev.dev = &pdev->dev;
