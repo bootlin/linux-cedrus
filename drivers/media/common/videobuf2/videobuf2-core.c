@@ -968,9 +968,8 @@ static int __prepare_mmap(struct vb2_buffer *vb, const void *pb)
 {
 	int ret = 0;
 
-	if (pb)
-		ret = call_bufop(vb->vb2_queue, fill_vb2_buffer,
-				 vb, pb, vb->planes);
+	ret = call_bufop(vb->vb2_queue, fill_vb2_buffer,
+			 vb, vb->planes);
 	return ret ? ret : call_vb_qop(vb, buf_prepare, vb);
 }
 
@@ -988,12 +987,10 @@ static int __prepare_userptr(struct vb2_buffer *vb, const void *pb)
 
 	memset(planes, 0, sizeof(planes[0]) * vb->num_planes);
 	/* Copy relevant information provided by the userspace */
-	if (pb) {
-		ret = call_bufop(vb->vb2_queue, fill_vb2_buffer,
-				 vb, pb, planes);
-		if (ret)
-			return ret;
-	}
+	ret = call_bufop(vb->vb2_queue, fill_vb2_buffer,
+			 vb, planes);
+	if (ret)
+		return ret;
 
 	for (plane = 0; plane < vb->num_planes; ++plane) {
 		/* Skip the plane if already verified */
@@ -1104,12 +1101,10 @@ static int __prepare_dmabuf(struct vb2_buffer *vb, const void *pb)
 
 	memset(planes, 0, sizeof(planes[0]) * vb->num_planes);
 	/* Copy relevant information provided by the userspace */
-	if (pb) {
-		ret = call_bufop(vb->vb2_queue, fill_vb2_buffer,
-				 vb, pb, planes);
-		if (ret)
-			return ret;
-	}
+	ret = call_bufop(vb->vb2_queue, fill_vb2_buffer,
+			 vb, planes);
+	if (ret)
+		return ret;
 
 	for (plane = 0; plane < vb->num_planes; ++plane) {
 		struct dma_buf *dbuf = dma_buf_get(planes[plane].m.fd);
