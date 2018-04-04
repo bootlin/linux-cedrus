@@ -184,6 +184,7 @@ static int vb2_fill_vb2_v4l2_buffer(struct vb2_buffer *vb, struct v4l2_buffer *b
 		return -EINVAL;
 	}
 	vbuf->sequence = 0;
+	vbuf->request_fd = -1;
 
 	if (V4L2_TYPE_IS_MULTIPLANAR(b->type)) {
 		switch (b->memory) {
@@ -391,6 +392,7 @@ static int vb2_queue_or_prepare_buf(struct vb2_queue *q, struct media_device *md
 	}
 
 	*p_req = req;
+	vbuf->request_fd = b->request_fd;
 
 	return 0;
 }
@@ -496,9 +498,9 @@ static void __fill_v4l2_buffer(struct vb2_buffer *vb, void *pb)
 
 	if (vb2_buffer_in_use(q, vb))
 		b->flags |= V4L2_BUF_FLAG_MAPPED;
-	if (vb->req_obj.req) {
+	if (vbuf->request_fd >= 0) {
 		b->flags |= V4L2_BUF_FLAG_REQUEST_FD;
-		b->request_fd = -1;
+		b->request_fd = vbuf->request_fd;
 	}
 
 	if (!q->is_output &&
