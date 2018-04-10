@@ -31,6 +31,16 @@
 
 #define SUNXI_CEDRUS_NAME	"sunxi-cedrus"
 
+enum sunxi_cedrus_control_id {
+	SUNXI_CEDRUS_CTRL_DEC_MPEG2_FRAME_HDR = 0,
+	SUNXI_CEDRUS_CTRL_MAX,
+};
+
+struct sunxi_cedrus_control {
+	u32	id;
+	u32	elem_size;
+};
+
 struct sunxi_cedrus_fmt {
 	u32 fourcc;
 	int depth;
@@ -48,10 +58,10 @@ struct sunxi_cedrus_ctx {
 	struct v4l2_pix_format_mplane dst_fmt;
 
 	struct v4l2_ctrl_handler hdl;
+	struct v4l2_ctrl *ctrls[SUNXI_CEDRUS_CTRL_MAX];
 
 	struct vb2_buffer *dst_bufs[VIDEO_MAX_FRAME];
 
-	struct v4l2_ctrl *mpeg2_frame_hdr_ctrl;
 	int job_abort;
 
 	struct work_struct try_schedule_work;

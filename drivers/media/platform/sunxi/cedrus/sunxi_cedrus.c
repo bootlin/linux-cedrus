@@ -56,28 +56,38 @@ static const struct v4l2_ctrl_ops sunxi_cedrus_ctrl_ops = {
 	.s_ctrl = sunxi_cedrus_s_ctrl,
 };
 
-static const struct v4l2_ctrl_config sunxi_cedrus_ctrl_mpeg2_frame_hdr = {
-	.ops = &sunxi_cedrus_ctrl_ops,
-	.id = V4L2_CID_MPEG_VIDEO_MPEG2_FRAME_HDR,
-	.elem_size = sizeof(struct v4l2_ctrl_mpeg2_frame_hdr),
+static const struct sunxi_cedrus_control controls[] = {
+	[SUNXI_CEDRUS_CTRL_DEC_MPEG2_FRAME_HDR] = {
+		.id		= V4L2_CID_MPEG_VIDEO_MPEG2_FRAME_HDR,
+		.elem_size	= sizeof(struct v4l2_ctrl_mpeg2_frame_hdr),
+	},
 };
 
 static int sunxi_cedrus_init_ctrls(struct sunxi_cedrus_dev *dev,
 				   struct sunxi_cedrus_ctx *ctx)
 {
 	struct v4l2_ctrl_handler *hdl = &ctx->hdl;
+	unsigned int num_ctrls = ARRAY_SIZE(controls);
+	unsigned int i;
 
-	v4l2_ctrl_handler_init(hdl, 1);
+	v4l2_ctrl_handler_init(hdl, num_ctrls);
 	if (hdl->error) {
 		dev_err(dev->dev, "Couldn't initialize our control handler\n");
 		return hdl->error;
 	}
 
-	ctx->mpeg2_frame_hdr_ctrl = v4l2_ctrl_new_custom(hdl,
-				 &sunxi_cedrus_ctrl_mpeg2_frame_hdr, NULL);
-	if (hdl->error) {
-		v4l2_ctrl_handler_free(hdl);
-		return hdl->error;
+	for (i = 0; i < num_ctrls; i++) {
+		struct v4l2_ctrl_config cfg = { 0 };
+
+		cfg.ops = &sunxi_cedrus_ctrl_ops;
+		cfg.elem_size = controls[i].elem_size;
+		cfg.id = controls[i].id;
+
+		ctx->ctrls[i] = v4l2_ctrl_new_custom(hdl, &cfg, NULL);
+		if (hdl->error) {
+			v4l2_ctrl_handler_free(hdl);
+			return hdl->error;
+		}
 	}
 
 	ctx->fh.ctrl_handler = hdl;
@@ -89,8 +99,12 @@ static int sunxi_cedrus_init_ctrls(struct sunxi_cedrus_dev *dev,
 static void sunxi_cedrus_deinit_ctrls(struct sunxi_cedrus_dev *dev,
 				      struct sunxi_cedrus_ctx *ctx)
 {
+	unsigned int num_ctrls = ARRAY_SIZE(controls);
+	unsigned int i;
+
 	v4l2_ctrl_handler_free(&ctx->hdl);
-	ctx->mpeg2_frame_hdr_ctrl = NULL;
+	for (i = 0; i < num_ctrls; i++)
+		ctx->ctrls[0] = NULL;
 }
 
 static int sunxi_cedrus_open(struct file *file)

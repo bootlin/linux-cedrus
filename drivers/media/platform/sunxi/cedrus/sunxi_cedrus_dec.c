@@ -32,6 +32,14 @@
 #include "sunxi_cedrus_dec.h"
 #include "sunxi_cedrus_hw.h"
 
+static inline void *get_ctrl_ptr(struct sunxi_cedrus_ctx *ctx,
+				 enum sunxi_cedrus_control_id id)
+{
+	struct v4l2_ctrl *ctrl = ctx->ctrls[id];
+
+	return ctrl->p_cur.p;
+}
+
 void sunxi_cedrus_device_work(struct work_struct *work)
 {
 	struct sunxi_cedrus_ctx *ctx = container_of(work,
@@ -139,16 +147,14 @@ void sunxi_cedrus_device_run(void *priv)
 	spin_lock_irqsave(&ctx->dev->irq_lock, flags);
 
 	if (ctx->vpu_src_fmt->fourcc == V4L2_PIX_FMT_MPEG2_FRAME) {
-		if (!ctx->mpeg2_frame_hdr_ctrl) {
+		if (!ctx->ctrls[SUNXI_CEDRUS_CTRL_DEC_MPEG2_FRAME_HDR]) {
 			v4l2_err(&ctx->dev->v4l2_dev,
 				 "Invalid MPEG2 frame header control\n");
 			ctx->job_abort = 1;
 			goto unlock_complete;
 		}
 
-		mpeg2_frame_hdr = (struct v4l2_ctrl_mpeg2_frame_hdr *)
-				ctx->mpeg2_frame_hdr_ctrl->p_new.p;
-
+		mpeg2_frame_hdr = get_ctrl_ptr(ctx, SUNXI_CEDRUS_CTRL_DEC_MPEG2_FRAME_HDR);
 		sunxi_cedrus_mpeg2_setup(ctx, src_buf_addr, dst_luma_addr,
 					 dst_chroma_addr, mpeg2_frame_hdr);
 
