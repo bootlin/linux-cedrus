@@ -138,7 +138,8 @@ void sunxi_cedrus_device_run(void *priv)
 
 	spin_lock_irqsave(&ctx->dev->irq_lock, flags);
 
-	if (ctx->vpu_src_fmt->fourcc == V4L2_PIX_FMT_MPEG2_FRAME) {
+	switch (ctx->vpu_src_fmt->fourcc) {
+	case V4L2_PIX_FMT_MPEG2_FRAME:
 		if (!ctx->ctrls[SUNXI_CEDRUS_CTRL_DEC_MPEG2_FRAME_HDR]) {
 			v4l2_err(&ctx->dev->v4l2_dev,
 				 "Invalid MPEG2 frame header control\n");
@@ -151,7 +152,9 @@ void sunxi_cedrus_device_run(void *priv)
 					 dst_chroma_addr, mpeg2_frame_hdr);
 
 		mpeg1 = mpeg2_frame_hdr->type == MPEG1;
-	} else {
+		break;
+
+	default:
 		ctx->job_abort = 1;
 	}
 
