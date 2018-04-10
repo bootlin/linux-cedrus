@@ -62,11 +62,41 @@ static const struct v4l2_ctrl_config sunxi_cedrus_ctrl_mpeg2_frame_hdr = {
 	.elem_size = sizeof(struct v4l2_ctrl_mpeg2_frame_hdr),
 };
 
+static int sunxi_cedrus_init_ctrls(struct sunxi_cedrus_dev *dev,
+				   struct sunxi_cedrus_ctx *ctx)
+{
+	struct v4l2_ctrl_handler *hdl = &ctx->hdl;
+
+	v4l2_ctrl_handler_init(hdl, 1);
+	if (hdl->error) {
+		dev_err(dev->dev, "Couldn't initialize our control handler\n");
+		return hdl->error;
+	}
+
+	ctx->mpeg2_frame_hdr_ctrl = v4l2_ctrl_new_custom(hdl,
+				 &sunxi_cedrus_ctrl_mpeg2_frame_hdr, NULL);
+	if (hdl->error) {
+		v4l2_ctrl_handler_free(hdl);
+		return hdl->error;
+	}
+
+	ctx->fh.ctrl_handler = hdl;
+	v4l2_ctrl_handler_setup(hdl);
+
+	return 0;
+}
+
+static void sunxi_cedrus_deinit_ctrls(struct sunxi_cedrus_dev *dev,
+				      struct sunxi_cedrus_ctx *ctx)
+{
+	v4l2_ctrl_handler_free(&ctx->hdl);
+	ctx->mpeg2_frame_hdr_ctrl = NULL;
+}
+
 static int sunxi_cedrus_open(struct file *file)
 {
 	struct sunxi_cedrus_dev *dev = video_drvdata(file);
 	struct sunxi_cedrus_ctx *ctx = NULL;
-	struct v4l2_ctrl_handler *hdl;
 	int rc;
 
 	if (mutex_lock_interruptible(&dev->dev_mutex))
@@ -86,18 +116,10 @@ static int sunxi_cedrus_open(struct file *file)
 	v4l2_fh_init(&ctx->fh, video_devdata(file));
 	file->private_data = &ctx->fh;
 	ctx->dev = dev;
-	hdl = &ctx->hdl;
-	v4l2_ctrl_handler_init(hdl, 2);
 
-	ctx->mpeg2_frame_hdr_ctrl = v4l2_ctrl_new_custom(hdl,
-			&sunxi_cedrus_ctrl_mpeg2_frame_hdr, NULL);
-	if (hdl->error) {
-		rc = hdl->error;
-		goto err_ctrl_deinit;
-	}
-
-	ctx->fh.ctrl_handler = hdl;
-	v4l2_ctrl_handler_setup(hdl);
+	rc = sunxi_cedrus_init_ctrls(dev, ctx);
+	if (rc)
+		goto err_free;
 
 	ctx->fh.m2m_ctx = v4l2_m2m_ctx_init(dev->m2m_dev, ctx,
 					    &sunxi_cedrus_queue_init);
@@ -115,7 +137,8 @@ static int sunxi_cedrus_open(struct file *file)
 	return 0;
 
 err_ctrl_deinit:
-	v4l2_ctrl_handler_free(hdl);
+	sunxi_cedrus_deinit_ctrls(dev, ctx);
+err_free:
 	kfree(ctx);
 	mutex_unlock(&dev->dev_mutex);
 	return rc;
@@ -132,8 +155,8 @@ static int sunxi_cedrus_release(struct file *file)
 	mutex_lock(&dev->dev_mutex);
 	v4l2_fh_del(&ctx->fh);
 	v4l2_m2m_ctx_release(ctx->fh.m2m_ctx);
-	v4l2_ctrl_handler_free(&ctx->hdl);
-	ctx->mpeg2_frame_hdr_ctrl = NULL;
+	sunxi_cedrus_deinit_ctrls(dev, ctx);
+	v4l2_fh_exit(&ctx->fh);
 	v4l2_fh_exit(&ctx->fh);
 	kfree(ctx);
 	mutex_unlock(&dev->dev_mutex);
