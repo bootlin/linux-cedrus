@@ -31,31 +31,6 @@
 
 #define SUNXI_CEDRUS_NAME	"sunxi-cedrus"
 
-struct sunxi_cedrus_dev {
-	struct v4l2_device v4l2_dev;
-	struct video_device vfd;
-	struct media_device mdev;
-	struct media_pad pad[2];
-	struct platform_device *pdev;
-	struct device *dev;
-	struct v4l2_m2m_dev *m2m_dev;
-
-	/* Mutex for device file */
-	struct mutex dev_mutex;
-	/* Spinlock for interrupt */
-	spinlock_t irq_lock;
-
-	struct clk *mod_clk;
-	struct clk *ahb_clk;
-	struct clk *ram_clk;
-
-	struct reset_control *rstc;
-
-	struct regmap *syscon;
-
-	char *base;
-};
-
 struct sunxi_cedrus_fmt {
 	u32 fourcc;
 	int depth;
@@ -89,6 +64,31 @@ struct sunxi_cedrus_buffer {
 	struct vb2_v4l2_buffer vb;
 	enum vb2_buffer_state state;
 	struct list_head list;
+};
+
+struct sunxi_cedrus_dev {
+	struct v4l2_device v4l2_dev;
+	struct video_device vfd;
+	struct media_device mdev;
+	struct media_pad pad[2];
+	struct platform_device *pdev;
+	struct device *dev;
+	struct v4l2_m2m_dev *m2m_dev;
+
+	/* Mutex for device file */
+	struct mutex dev_mutex;
+	/* Spinlock for interrupt */
+	spinlock_t irq_lock;
+
+	struct clk *mod_clk;
+	struct clk *ahb_clk;
+	struct clk *ram_clk;
+
+	struct reset_control *rstc;
+
+	struct regmap *syscon;
+
+	char *base;
 };
 
 static inline void sunxi_cedrus_write(struct sunxi_cedrus_dev *dev,
