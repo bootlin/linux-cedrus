@@ -134,14 +134,6 @@ void sunxi_cedrus_device_run(void *priv)
 		v4l2_ctrl_request_setup(dst_req, &ctx->hdl);
 	}
 
-	dst_buf->vb2_buf.timestamp = src_buf->vb2_buf.timestamp;
-	if (src_buf->flags & V4L2_BUF_FLAG_TIMECODE)
-		dst_buf->timecode = src_buf->timecode;
-	dst_buf->field = src_buf->field;
-	dst_buf->flags = src_buf->flags & (V4L2_BUF_FLAG_TIMECODE |
-		 V4L2_BUF_FLAG_KEYFRAME | V4L2_BUF_FLAG_PFRAME |
-		 V4L2_BUF_FLAG_BFRAME   | V4L2_BUF_FLAG_TSTAMP_SRC_MASK);
-
 	ctx->job_abort = 0;
 
 	spin_lock_irqsave(&ctx->dev->irq_lock, flags);
