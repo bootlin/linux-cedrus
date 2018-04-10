@@ -53,12 +53,10 @@ static const u8 mpeg_default_non_intra_quant[64] = {
 #define m_niq(i) ((i << 8) | mpeg_default_non_intra_quant[i])
 
 void sunxi_cedrus_mpeg2_setup(struct sunxi_cedrus_ctx *ctx,
-			      dma_addr_t src_buf_addr,
-			      dma_addr_t dst_luma_addr,
-			      dma_addr_t dst_chroma_addr,
-			      struct v4l2_ctrl_mpeg2_frame_hdr *frame_hdr)
+			      struct sunxi_cedrus_run *run)
 {
 	struct sunxi_cedrus_dev *dev = ctx->dev;
+	const struct v4l2_ctrl_mpeg2_frame_hdr *frame_hdr = run->mpeg2.hdr;
 
 	u16 width = DIV_ROUND_UP(frame_hdr->width, 16);
 	u16 height = DIV_ROUND_UP(frame_hdr->height, 16);
@@ -68,6 +66,7 @@ void sunxi_cedrus_mpeg2_setup(struct sunxi_cedrus_ctx *ctx,
 	int i;
 
 	struct vb2_buffer *fwd_vb2_buf, *bwd_vb2_buf;
+	dma_addr_t src_buf_addr, dst_luma_addr, dst_chroma_addr;
 	dma_addr_t fwd_luma = 0, fwd_chroma = 0, bwd_luma = 0, bwd_chroma = 0;
 
 
@@ -130,7 +129,9 @@ void sunxi_cedrus_mpeg2_setup(struct sunxi_cedrus_ctx *ctx,
 	sunxi_cedrus_write(dev, bwd_luma, VE_MPEG_BACK_LUMA);
 	sunxi_cedrus_write(dev, bwd_chroma, VE_MPEG_BACK_CHROMA);
 
-	/* Desination luma and chroma buffers. */
+	/* Destination luma and chroma buffers. */
+	dst_luma_addr = vb2_dma_contig_plane_dma_addr(&run->dst->vb2_buf, 0);
+	dst_chroma_addr = vb2_dma_contig_plane_dma_addr(&run->dst->vb2_buf, 1);
 	sunxi_cedrus_write(dev, dst_luma_addr, VE_MPEG_REC_LUMA);
 	sunxi_cedrus_write(dev, dst_chroma_addr, VE_MPEG_REC_CHROMA);
 	sunxi_cedrus_write(dev, dst_luma_addr, VE_MPEG_ROT_LUMA);
@@ -141,6 +142,7 @@ void sunxi_cedrus_mpeg2_setup(struct sunxi_cedrus_ctx *ctx,
 	sunxi_cedrus_write(dev, vld_len, VE_MPEG_VLD_LEN);
 
 	/* Source beginning and end addresses. */
+	src_buf_addr = vb2_dma_contig_plane_dma_addr(&run->src->vb2_buf, 0);
 	sunxi_cedrus_write(dev, VE_MPEG_VLD_ADDR_VAL(src_buf_addr),
 			   VE_MPEG_VLD_ADDR);
 	sunxi_cedrus_write(dev, src_buf_addr + VBV_SIZE - 1, VE_MPEG_VLD_END);

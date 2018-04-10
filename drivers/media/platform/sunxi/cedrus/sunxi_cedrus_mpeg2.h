@@ -24,12 +24,10 @@
 #define _SUNXI_CEDRUS_MPEG2_H_
 
 struct sunxi_cedrus_ctx;
+struct sunxi_cedrus_run;
 
 void sunxi_cedrus_mpeg2_setup(struct sunxi_cedrus_ctx *ctx,
-			      dma_addr_t src_buf_addr,
-			      dma_addr_t dst_luma_addr,
-			      dma_addr_t dst_chroma_addr,
-			      struct v4l2_ctrl_mpeg2_frame_hdr *frame_hdr);
+			      struct sunxi_cedrus_run *run);
 void sunxi_cedrus_mpeg2_trigger(struct sunxi_cedrus_ctx *ctx, bool mpeg1);
 
 #endif

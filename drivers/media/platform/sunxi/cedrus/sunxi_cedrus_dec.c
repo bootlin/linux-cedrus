@@ -77,41 +77,27 @@ void sunxi_cedrus_device_work(struct work_struct *work)
 void sunxi_cedrus_device_run(void *priv)
 {
 	struct sunxi_cedrus_ctx *ctx = priv;
-	struct vb2_v4l2_buffer *src_buf, *dst_buf;
+	struct sunxi_cedrus_run run = { 0 };
 	struct media_request *src_req, *dst_req;
-	dma_addr_t src_buf_addr, dst_luma_addr, dst_chroma_addr;
 	unsigned long flags;
-	struct v4l2_ctrl_mpeg2_frame_hdr *mpeg2_frame_hdr;
 	bool mpeg1 = false;
 
-	src_buf = v4l2_m2m_next_src_buf(ctx->fh.m2m_ctx);
-	if (!src_buf) {
+	run.src = v4l2_m2m_next_src_buf(ctx->fh.m2m_ctx);
+	if (!run.src) {
 		v4l2_err(&ctx->dev->v4l2_dev,
 			 "No source buffer to prepare\n");
 		return;
 	}
 
-	dst_buf = v4l2_m2m_next_dst_buf(ctx->fh.m2m_ctx);
-	if (!dst_buf) {
+	run.dst = v4l2_m2m_next_dst_buf(ctx->fh.m2m_ctx);
+	if (!run.dst) {
 		v4l2_err(&ctx->dev->v4l2_dev,
 			 "No destination buffer to prepare\n");
 		return;
 	}
 
-	src_buf_addr = vb2_dma_contig_plane_dma_addr(&src_buf->vb2_buf, 0);
-	dst_luma_addr = vb2_dma_contig_plane_dma_addr(&dst_buf->vb2_buf, 0);
-	dst_chroma_addr = vb2_dma_contig_plane_dma_addr(&dst_buf->vb2_buf, 1);
-	if (!src_buf || !dst_luma_addr || !dst_chroma_addr) {
-		v4l2_err(&ctx->dev->v4l2_dev,
-			 "Acquiring kernel pointers to buffers failed\n");
-		return;
-	}
-
 	/* Apply request(s) controls if needed. */
-
-	src_req = src_buf->vb2_buf.req_obj.req;
-	dst_req = dst_buf->vb2_buf.req_obj.req;
-
+	src_req = run.src->vb2_buf.req_obj.req;
 	if (src_req) {
 		if (src_req->state != MEDIA_REQUEST_STATE_QUEUED) {
 			v4l2_err(&ctx->dev->v4l2_dev,
@@ -123,6 +109,7 @@ void sunxi_cedrus_device_run(void *priv)
 		v4l2_ctrl_request_setup(src_req, &ctx->hdl);
 	}
 
+	dst_req = run.dst->vb2_buf.req_obj.req;
 	if (dst_req && dst_req != src_req) {
 		if (dst_req->state != MEDIA_REQUEST_STATE_QUEUED) {
 			v4l2_err(&ctx->dev->v4l2_dev,
@@ -147,11 +134,10 @@ void sunxi_cedrus_device_run(void *priv)
 			goto unlock_complete;
 		}
 
-		mpeg2_frame_hdr = get_ctrl_ptr(ctx, SUNXI_CEDRUS_CTRL_DEC_MPEG2_FRAME_HDR);
-		sunxi_cedrus_mpeg2_setup(ctx, src_buf_addr, dst_luma_addr,
-					 dst_chroma_addr, mpeg2_frame_hdr);
+		run.mpeg2.hdr = get_ctrl_ptr(ctx, SUNXI_CEDRUS_CTRL_DEC_MPEG2_FRAME_HDR);
+		sunxi_cedrus_mpeg2_setup(ctx, &run);
 
-		mpeg1 = mpeg2_frame_hdr->type == MPEG1;
+		mpeg1 = run.mpeg2.hdr->type == MPEG1;
 		break;
 
 	default:
@@ -175,8 +161,8 @@ unlock_complete:
 		if (ctx->vpu_src_fmt->fourcc == V4L2_PIX_FMT_MPEG2_FRAME)
 			sunxi_cedrus_mpeg2_trigger(ctx, mpeg1);
 	} else {
-		v4l2_m2m_buf_done(src_buf, VB2_BUF_STATE_ERROR);
-		v4l2_m2m_buf_done(dst_buf, VB2_BUF_STATE_ERROR);
+		v4l2_m2m_buf_done(run.src, VB2_BUF_STATE_ERROR);
+		v4l2_m2m_buf_done(run.dst, VB2_BUF_STATE_ERROR);
 	}
 
 	spin_unlock_irqrestore(&ctx->dev->irq_lock, flags);

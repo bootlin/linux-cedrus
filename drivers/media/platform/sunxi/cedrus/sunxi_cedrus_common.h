@@ -48,6 +48,19 @@ struct sunxi_cedrus_fmt {
 	unsigned int num_planes;
 };
 
+struct sunxi_cedrus_mpeg2_run {
+	const struct v4l2_ctrl_mpeg2_frame_hdr		*hdr;
+};
+
+struct sunxi_cedrus_run {
+	struct vb2_v4l2_buffer	*src;
+	struct vb2_v4l2_buffer	*dst;
+
+	union {
+		struct sunxi_cedrus_mpeg2_run	mpeg2;
+	};
+};
+
 struct sunxi_cedrus_ctx {
 	struct v4l2_fh fh;
 	struct sunxi_cedrus_dev	*dev;
