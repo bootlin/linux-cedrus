@@ -3733,10 +3733,12 @@ void v4l2_ctrl_request_complete(struct media_request *req,
 			continue;
 
 		v4l2_ctrl_lock(ctrl);
+
 		if (ref->req)
 			ptr_to_ptr(ctrl, ref->req->p_req, ref->p_req);
 		else
 			ptr_to_ptr(ctrl, ctrl->p_cur, ref->p_req);
+
 		v4l2_ctrl_unlock(ctrl);
 	}
 
@@ -3796,8 +3798,11 @@ void v4l2_ctrl_request_setup(struct media_request *req,
 				}
 			}
 		}
-		if (!have_new_data)
+
+		if (!have_new_data) {
+			v4l2_ctrl_unlock(master);
 			continue;
+		}
 
 		for (i = 0; i < master->ncontrols; i++) {
 			if (master->cluster[i]) {
