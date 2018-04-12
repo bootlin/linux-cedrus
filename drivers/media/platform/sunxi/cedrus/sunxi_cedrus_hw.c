@@ -33,10 +33,42 @@
 #include <media/v4l2-mem2mem.h>
 
 #include "sunxi_cedrus_common.h"
+#include "sunxi_cedrus_hw.h"
 #include "sunxi_cedrus_regs.h"
 
 #define SYSCON_SRAM_CTRL_REG0	0x0
 #define SYSCON_SRAM_C1_MAP_VE	0x7fffffff
+
+int sunxi_cedrus_engine_enable(struct sunxi_cedrus_dev *dev,
+			       enum sunxi_cedrus_engine engine)
+{
+	u32 reg = 0;
+
+	/*
+	 * FIXME: This is only valid on 32-bits DDR's, we should test
+	 * it on the A13/A33.
+	 */
+	reg |= VE_CTRL_REC_WR_MODE_2MB;
+
+	reg |= VE_CTRL_CACHE_BUS_BW_128;
+
+	switch (engine) {
+	case SUNXI_CEDRUS_ENGINE_MPEG:
+		reg |= VE_CTRL_DEC_MODE_MPEG;
+		break;
+
+	default:
+		return -EINVAL;
+	}
+
+	sunxi_cedrus_write(dev, reg, VE_CTRL);
+	return 0;
+}
+
+void sunxi_cedrus_engine_disable(struct sunxi_cedrus_dev *dev)
+{
+	sunxi_cedrus_write(dev, VE_CTRL_DEC_MODE_DISABLED, VE_CTRL);
+}
 
 static irqreturn_t sunxi_cedrus_ve_irq(int irq, void *dev_id)
 {
@@ -55,8 +87,7 @@ static irqreturn_t sunxi_cedrus_ve_irq(int irq, void *dev_id)
 
 	status = sunxi_cedrus_read(dev, VE_MPEG_STATUS);
 	sunxi_cedrus_write(dev, 0x0000c00f, VE_MPEG_STATUS);
-
-	sunxi_cedrus_write(dev, VE_CTRL_REINIT, VE_CTRL);
+	sunxi_cedrus_engine_disable(dev);
 
 	ctx = v4l2_m2m_get_curr_priv(dev->m2m_dev);
 	if (!ctx) {

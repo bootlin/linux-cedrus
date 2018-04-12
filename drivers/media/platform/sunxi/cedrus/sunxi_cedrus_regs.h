@@ -27,18 +27,6 @@
  * For more information, consult http://linux-sunxi.org/VE_Register_guide
  */
 
-/* Special registers values */
-
-/* VE_CTRL:
- * The first 3 bits indicate the engine (0 for MPEG, 1 for H264, b for AVC...)
- * The 16th and 17th bits indicate the memory type (3 for DDR3 32 bits)
- * The 20th bit is unknown but needed
- */
-#define VE_CTRL_MPEG		0x130000
-#define VE_CTRL_H264		0x130001
-#define VE_CTRL_AVC		0x13000b
-#define VE_CTRL_REINIT		0x130007
-
 /* VE_MPEG_CTRL:
  * The bit 3 (0x8) is used to enable IRQs
  * The other bits are unknown but needed
@@ -77,6 +65,21 @@
 
 /* Registers addresses */
 #define VE_CTRL				0x000
+/*
+ * The datasheet states that this should be set to 2MB on a 32bits
+ * DDR-3.
+ */
+#define VE_CTRL_REC_WR_MODE_2MB			(1 << 20)
+#define VE_CTRL_REC_WR_MODE_1MB			(0 << 20)
+
+#define VE_CTRL_CACHE_BUS_BW_128		(3 << 16)
+#define VE_CTRL_CACHE_BUS_BW_256		(2 << 16)
+
+#define VE_CTRL_DEC_MODE_DISABLED		(7 << 0)
+#define VE_CTRL_DEC_MODE_H265			(4 << 0)
+#define VE_CTRL_DEC_MODE_H264			(1 << 0)
+#define VE_CTRL_DEC_MODE_MPEG			(0 << 0)
+
 #define VE_VERSION			0x0f0
 
 #define VE_MPEG_PIC_HDR			0x100

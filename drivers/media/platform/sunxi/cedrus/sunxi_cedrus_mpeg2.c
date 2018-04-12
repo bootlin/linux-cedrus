@@ -83,7 +83,7 @@ void sunxi_cedrus_mpeg2_setup(struct sunxi_cedrus_ctx *ctx,
 	}
 
 	/* Activate MPEG engine. */
-	sunxi_cedrus_write(dev, VE_CTRL_MPEG, VE_CTRL);
+	sunxi_cedrus_engine_enable(dev, SUNXI_CEDRUS_ENGINE_MPEG);
 
 	/* Set quantization matrices. */
 	for (i = 0; i < 64; i++) {
