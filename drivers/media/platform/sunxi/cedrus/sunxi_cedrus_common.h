@@ -103,6 +103,8 @@ struct sunxi_cedrus_dev {
 	/* Spinlock for interrupt */
 	spinlock_t irq_lock;
 
+	void __iomem		*base;
+
 	struct clk *mod_clk;
 	struct clk *ahb_clk;
 	struct clk *ram_clk;
@@ -110,8 +112,6 @@ struct sunxi_cedrus_dev {
 	struct reset_control *rstc;
 
 	struct regmap *syscon;
-
-	char *base;
 };
 
 static inline void sunxi_cedrus_write(struct sunxi_cedrus_dev *dev,
