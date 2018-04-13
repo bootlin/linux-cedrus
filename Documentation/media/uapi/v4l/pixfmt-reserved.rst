@@ -243,7 +243,20 @@ please make a proposal on the linux-media mailing list.
 	It is an opaque intermediate format and the MDP hardware must be
 	used to convert ``V4L2_PIX_FMT_MT21C`` to ``V4L2_PIX_FMT_NV12M``,
 	``V4L2_PIX_FMT_YUV420M`` or ``V4L2_PIX_FMT_YVU420``.
+    * .. _V4L2-PIX-FMT-MB32-NV12:
 
+      - ``V4L2_PIX_FMT_MB32_NV12``
+      - 'MN12'
+      - Two-planar NV12-based format used by the Allwinner video engine
+        hardware, with 32x32 tiles for the luminance plane and 32x64 tiles
+        for the chrominance plane. Each tile is a linear pixel data
+        representation within its own bounds. Each tile follows the previous
+        one linearly (as in, from left to right, top to bottom).
+
+        The frame dimensions are aligned to match an integer number of
+        tiles, resulting in 32-aligned resolutions for the luminance plane
+        and 16-aligned resolutions for the chrominance plane (with 2x2
+        subsampling).
 
 .. tabularcolumns:: |p{6.6cm}|p{2.2cm}|p{8.7cm}|
 
