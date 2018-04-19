@@ -658,6 +658,7 @@ static const struct dev_pm_ops sun4i_frontend_pm_ops = {
 };
 
 const struct of_device_id sun4i_frontend_of_table[] = {
+	{ .compatible = "allwinner,sun7i-a20-display-frontend" },
 	{ .compatible = "allwinner,sun8i-a33-display-frontend" },
 	{ }
 };
