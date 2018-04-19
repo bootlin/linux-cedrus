@@ -157,6 +157,9 @@ static long media_request_ioctl_queue(struct media_request *req)
 		media_request_get(req);
 	}
 
+	if (mdev->ops->req_complete)
+		mdev->ops->req_complete(req);
+
 	return ret;
 }
 
