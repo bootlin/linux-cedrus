@@ -1153,4 +1153,5 @@ int vb2_verify_memory_type(struct vb2_queue *q,
 		enum vb2_memory memory, unsigned int type);
 
 bool vb2_core_request_has_buffers(struct media_request *req);
+void *vb2_core_request_find_buffer_priv(struct media_request *req);
 #endif /* _MEDIA_VIDEOBUF2_CORE_H */
