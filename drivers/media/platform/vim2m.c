@@ -453,6 +453,17 @@ static void device_isr(struct timer_list *t)
 	schedule_work(&vim2m_dev->work_run);
 }
 
+static void request_complete(struct media_request *req)
+{
+	struct vim2m_ctx *curr_ctx;
+
+	curr_ctx = (struct vim2m_ctx *) vb2_core_request_find_buffer_priv(req);
+	if (curr_ctx == NULL)
+		return;
+
+	v4l2_m2m_try_schedule(curr_ctx->fh.m2m_ctx);
+}
+
 /*
  * video ioctls
  */
@@ -1025,6 +1036,7 @@ static const struct v4l2_m2m_ops m2m_ops = {
 
 static const struct media_device_ops m2m_media_ops = {
 	.req_queue = vb2_request_queue,
+	.req_complete = request_complete,
 };
 
 static int vim2m_probe(struct platform_device *pdev)
