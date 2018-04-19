@@ -55,6 +55,7 @@ struct media_entity_notify {
  * @req_alloc: Allocate a request
  * @req_free: Free a request
  * @req_queue: Queue a request
+ * @req_complete: Complete a request
  */
 struct media_device_ops {
 	int (*link_notify)(struct media_link *link, u32 flags,
@@ -62,6 +63,7 @@ struct media_device_ops {
 	struct media_request *(*req_alloc)(struct media_device *mdev);
 	void (*req_free)(struct media_request *req);
 	int (*req_queue)(struct media_request *req);
+	void (*req_complete)(struct media_request *req);
 };
 
 /**
