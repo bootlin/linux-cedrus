@@ -1351,6 +1351,21 @@ bool vb2_core_request_has_buffers(struct media_request *req)
 }
 EXPORT_SYMBOL_GPL(vb2_core_request_has_buffers);
 
+void *vb2_core_request_find_buffer_priv(struct media_request *req)
+{
+	struct media_request_object *obj;
+	struct vb2_buffer *vb;
+
+	obj = media_request_object_find(req, &vb2_core_req_ops, NULL);
+	if (!obj)
+		return NULL;
+
+	vb = container_of(obj, struct vb2_buffer, req_obj);
+
+	return vb2_get_drv_priv(vb->vb2_queue);
+}
+EXPORT_SYMBOL_GPL(vb2_core_request_find_buffer_priv);
+
 int vb2_core_prepare_buf(struct vb2_queue *q, unsigned int index, void *pb,
 			 struct media_request *req)
 {
