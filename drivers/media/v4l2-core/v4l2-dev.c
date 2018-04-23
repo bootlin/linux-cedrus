@@ -353,13 +353,36 @@ static long v4l2_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 	if (vdev->fops->unlocked_ioctl) {
 		struct mutex *lock = v4l2_ioctl_get_lock(vdev, cmd);
+		struct mutex *queue_lock = NULL;
 
-		if (lock && mutex_lock_interruptible(lock))
+		/*
+		 * We need to serialize streamon/off with queueing new requests.
+		 * These ioctls may trigger the cancellation of a streaming
+		 * operation, and that should not be mixed with queueing a new
+		 * request at the same time.
+		 *
+		 * Also TRY/S_EXT_CTRLS needs this lock to correctly serialize
+		 * with MEDIA_REQUEST_IOC_QUEUE.
+		 */
+		if (vdev->v4l2_dev->mdev &&
+		    (cmd == VIDIOC_STREAMON || cmd == VIDIOC_STREAMOFF ||
+		     cmd == VIDIOC_S_EXT_CTRLS || cmd == VIDIOC_TRY_EXT_CTRLS))
+			queue_lock = &vdev->v4l2_dev->mdev->req_queue_mutex;
+
+		if (queue_lock && mutex_lock_interruptible(queue_lock))
 			return -ERESTARTSYS;
+
+		if (lock && mutex_lock_interruptible(lock)) {
+			if (queue_lock)
+				mutex_unlock(queue_lock);
+			return -ERESTARTSYS;
+		}
 		if (video_is_registered(vdev))
 			ret = vdev->fops->unlocked_ioctl(filp, cmd, arg);
 		if (lock)
 			mutex_unlock(lock);
+		if (queue_lock)
+			mutex_unlock(queue_lock);
 	} else
 		ret = -ENOTTY;
 
@@ -442,8 +465,20 @@ static int v4l2_release(struct inode *inode, struct file *filp)
 	struct video_device *vdev = video_devdata(filp);
 	int ret = 0;
 
+	/*
+	 * We need to serialize the release() with queueing new requests.
+	 * The release() may trigger the cancellation of a streaming
+	 * operation, and that should not be mixed with queueing a new
+	 * request at the same time.
+	 */
+	if (vdev->v4l2_dev->mdev)
+		mutex_lock(&vdev->v4l2_dev->mdev->req_queue_mutex);
+
 	if (vdev->fops->release)
 		ret = vdev->fops->release(filp);
+
+	if (vdev->v4l2_dev->mdev)
+		mutex_unlock(&vdev->v4l2_dev->mdev->req_queue_mutex);
 	if (vdev->dev_debug & V4L2_DEV_DEBUG_FOP)
 		printk(KERN_DEBUG "%s: release\n",
 			video_device_node_name(vdev));
