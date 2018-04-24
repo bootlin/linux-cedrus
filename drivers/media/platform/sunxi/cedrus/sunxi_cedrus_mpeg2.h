@@ -23,6 +23,8 @@
 #ifndef _SUNXI_CEDRUS_MPEG2_H_
 #define _SUNXI_CEDRUS_MPEG2_H_
 
+struct sunxi_cedrus_ctx;
+
 void sunxi_cedrus_mpeg2_setup(struct sunxi_cedrus_ctx *ctx,
 			      dma_addr_t src_buf_addr,
 			      dma_addr_t dst_luma_addr,
