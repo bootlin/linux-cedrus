@@ -129,14 +129,14 @@ static int sunxi_cedrus_release(struct file *file)
 
 	dev_dbg(dev->dev, "Releasing instance %p\n", ctx);
 
+	mutex_lock(&dev->dev_mutex);
 	v4l2_fh_del(&ctx->fh);
-	v4l2_fh_exit(&ctx->fh);
+	v4l2_m2m_ctx_release(ctx->fh.m2m_ctx);
 	v4l2_ctrl_handler_free(&ctx->hdl);
 	ctx->mpeg2_frame_hdr_ctrl = NULL;
-	mutex_lock(&dev->dev_mutex);
-	v4l2_m2m_ctx_release(ctx->fh.m2m_ctx);
-	mutex_unlock(&dev->dev_mutex);
+	v4l2_fh_exit(&ctx->fh);
 	kfree(ctx);
+	mutex_unlock(&dev->dev_mutex);
 
 	return 0;
 }
