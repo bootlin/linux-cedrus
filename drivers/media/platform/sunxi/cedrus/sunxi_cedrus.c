@@ -67,15 +67,15 @@ static int sunxi_cedrus_open(struct file *file)
 	struct sunxi_cedrus_dev *dev = video_drvdata(file);
 	struct sunxi_cedrus_ctx *ctx = NULL;
 	struct v4l2_ctrl_handler *hdl;
-	int rc = 0;
+	int rc;
 
 	if (mutex_lock_interruptible(&dev->dev_mutex))
 		return -ERESTARTSYS;
 
 	ctx = kzalloc(sizeof(*ctx), GFP_KERNEL);
 	if (!ctx) {
-		rc = -ENOMEM;
-		goto open_unlock;
+		mutex_unlock(&dev->dev_mutex);
+		return -ENOMEM;
 	}
 
 	INIT_WORK(&ctx->run_work, sunxi_cedrus_device_work);
@@ -93,8 +93,7 @@ static int sunxi_cedrus_open(struct file *file)
 			&sunxi_cedrus_ctrl_mpeg2_frame_hdr, NULL);
 	if (hdl->error) {
 		rc = hdl->error;
-		v4l2_ctrl_handler_free(hdl);
-		goto open_unlock;
+		goto err_ctrl_deinit;
 	}
 
 	ctx->fh.ctrl_handler = hdl;
@@ -104,10 +103,7 @@ static int sunxi_cedrus_open(struct file *file)
 					    &sunxi_cedrus_queue_init);
 	if (IS_ERR(ctx->fh.m2m_ctx)) {
 		rc = PTR_ERR(ctx->fh.m2m_ctx);
-
-		v4l2_ctrl_handler_free(hdl);
-		kfree(ctx);
-		goto open_unlock;
+		goto err_ctrl_deinit;
 	}
 
 	v4l2_fh_add(&ctx->fh);
@@ -115,7 +111,12 @@ static int sunxi_cedrus_open(struct file *file)
 	dev_dbg(dev->dev, "Created instance: %p, m2m_ctx: %p\n",
 		ctx, ctx->fh.m2m_ctx);
 
-open_unlock:
+	mutex_unlock(&dev->dev_mutex);
+	return 0;
+
+err_ctrl_deinit:
+	v4l2_ctrl_handler_free(hdl);
+	kfree(ctx);
 	mutex_unlock(&dev->dev_mutex);
 	return rc;
 }
