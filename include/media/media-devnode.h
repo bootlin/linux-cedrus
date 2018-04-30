@@ -28,8 +28,12 @@
 #include <linux/fs.h>
 #include <linux/device.h>
 #include <linux/cdev.h>
+#include <linux/debugfs.h>
 
 struct media_device;
+
+/* DebugFS top-level media directory */
+extern struct dentry *media_top_dir;
 
 /*
  * Flag to mark the media_devnode struct as registered. Drivers must not touch

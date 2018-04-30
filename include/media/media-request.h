@@ -164,6 +164,7 @@ struct media_request_object_ops {
  * larger object data.
  */
 struct media_request_object {
+	struct media_device *mdev;
 	const struct media_request_object_ops *ops;
 	void *priv;
 	struct media_request *req;
