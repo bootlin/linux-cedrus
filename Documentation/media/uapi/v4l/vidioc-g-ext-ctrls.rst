@@ -95,6 +95,26 @@ appropriate. In the first case the new value is set in struct
 is inappropriate (e.g. the given menu index is not supported by the menu
 control), then this will also result in an ``EINVAL`` error code error.
 
+If ``request_fd`` is set to a not-yet-queued :ref:`request <media-request-api>`
+file descriptor and ``which`` is set to ``V4L2_CTRL_WHICH_REQUEST_VAL``,
+then the controls are not applied immediately when calling
+:ref:`VIDIOC_S_EXT_CTRLS <VIDIOC_G_EXT_CTRLS>`, but instead are applied by
+the driver for the buffer associated with the same request.
+If the device does not support requests, then ``EPERM`` will be returned.
+If requests are supported but an invalid request FD is given, then
+``ENOENT`` will be returned.
+
+An attempt to call :ref:`VIDIOC_S_EXT_CTRLS <VIDIOC_G_EXT_CTRLS>` for a
+request that has already been queued will result in an ``EBUSY`` error.
+
+If ``request_fd`` is specified and ``which`` is set to ``V4L2_CTRL_WHICH_REQUEST_VAL``
+during a call to :ref:`VIDIOC_G_EXT_CTRLS <VIDIOC_G_EXT_CTRLS>`, then the
+returned values will be the values currently set for the request (or the
+hardware value if none is set) if the request has not yet been queued, or the
+values of the controls at the time of request completion if it has already
+completed. Attempting to get controls while the request has been queued but
+not yet completed will result in an ``EBUSY`` error.
+
 The driver will only set/get these controls if all control values are
 correct. This prevents the situation where only some of the controls
 were set/get. Only low-level errors (e. g. a failed i2c command) can
@@ -110,15 +130,13 @@ still cause this situation.
 .. flat-table:: struct v4l2_ext_control
     :header-rows:  0
     :stub-columns: 0
-    :widths:       1 1 1 2
+    :widths:       1 1 3
 
     * - __u32
       - ``id``
-      -
       - Identifies the control, set by the application.
     * - __u32
       - ``size``
-      -
       - The total size in bytes of the payload of this control. This is
 	normally 0, but for pointer controls this should be set to the
 	size of the memory containing the payload, or that will receive
@@ -135,51 +153,43 @@ still cause this situation.
 	   *length* of the string may well be much smaller.
     * - __u32
       - ``reserved2``\ [1]
-      -
       - Reserved for future extensions. Drivers and applications must set
 	the array to zero.
-    * - union
+    * - union {
       - (anonymous)
-    * -
-      - __s32
+    * - __s32
       - ``value``
       - New value or current value. Valid if this control is not of type
 	``V4L2_CTRL_TYPE_INTEGER64`` and ``V4L2_CTRL_FLAG_HAS_PAYLOAD`` is
 	not set.
-    * -
-      - __s64
+    * - __s64
       - ``value64``
       - New value or current value. Valid if this control is of type
 	``V4L2_CTRL_TYPE_INTEGER64`` and ``V4L2_CTRL_FLAG_HAS_PAYLOAD`` is
 	not set.
-    * -
-      - char *
+    * - char *
       - ``string``
       - A pointer to a string. Valid if this control is of type
 	``V4L2_CTRL_TYPE_STRING``.
-    * -
-      - __u8 *
+    * - __u8 *
       - ``p_u8``
       - A pointer to a matrix control of unsigned 8-bit values. Valid if
 	this control is of type ``V4L2_CTRL_TYPE_U8``.
-    * -
-      - __u16 *
+    * - __u16 *
       - ``p_u16``
       - A pointer to a matrix control of unsigned 16-bit values. Valid if
 	this control is of type ``V4L2_CTRL_TYPE_U16``.
-    * -
-      - __u32 *
+    * - __u32 *
       - ``p_u32``
       - A pointer to a matrix control of unsigned 32-bit values. Valid if
 	this control is of type ``V4L2_CTRL_TYPE_U32``.
-    * -
-      - void *
+    * - void *
       - ``ptr``
       - A pointer to a compound type which can be an N-dimensional array
 	and/or a compound type (the control's type is >=
 	``V4L2_CTRL_COMPOUND_TYPES``). Valid if
 	``V4L2_CTRL_FLAG_HAS_PAYLOAD`` is set for this control.
-
+    * - }
 
 .. tabularcolumns:: |p{4.0cm}|p{2.2cm}|p{2.1cm}|p{8.2cm}|
 
@@ -190,12 +200,11 @@ still cause this situation.
 .. flat-table:: struct v4l2_ext_controls
     :header-rows:  0
     :stub-columns: 0
-    :widths:       1 1 2 1
+    :widths:       1 1 3
 
-    * - union
+    * - union {
       - (anonymous)
-    * -
-      - __u32
+    * - __u32
       - ``ctrl_class``
       - The control class to which all controls belong, see
 	:ref:`ctrl-class`. Drivers that use a kernel framework for
@@ -204,18 +213,21 @@ still cause this situation.
 	support this can be tested by setting ``ctrl_class`` to 0 and
 	calling :ref:`VIDIOC_TRY_EXT_CTRLS <VIDIOC_G_EXT_CTRLS>` with a ``count`` of 0. If that
 	succeeds, then the driver supports this feature.
-    * -
-      - __u32
+    * - __u32
       - ``which``
       - Which value of the control to get/set/try.
 	``V4L2_CTRL_WHICH_CUR_VAL`` will return the current value of the
-	control and ``V4L2_CTRL_WHICH_DEF_VAL`` will return the default
-	value of the control.
+	control, ``V4L2_CTRL_WHICH_DEF_VAL`` will return the default
+	value of the control and ``V4L2_CTRL_WHICH_REQUEST_VAL`` indicates that
+	these controls have to be retrieved from a request or tried/set for
+	a request. In the latter case the ``request_fd`` field contains the
+	file descriptor of the request that should be used. If the device
+	does not support requests, then ``EPERM`` will be returned.
 
 	.. note::
 
-	   You can only get the default value of the control,
-	   you cannot set or try it.
+	   When using ``V4L2_CTRL_WHICH_DEF_VAL`` note that You can only
+	   get the default value of the control, you cannot set or try it.
 
 	For backwards compatibility you can also use a control class here
 	(see :ref:`ctrl-class`). In that case all controls have to
@@ -226,6 +238,7 @@ still cause this situation.
 	by setting ctrl_class to ``V4L2_CTRL_WHICH_CUR_VAL`` and calling
 	VIDIOC_TRY_EXT_CTRLS with a count of 0. If that fails, then the
 	driver does not support ``V4L2_CTRL_WHICH_CUR_VAL``.
+    * - }
     * - __u32
       - ``count``
       - The number of controls in the controls array. May also be zero.
@@ -272,8 +285,15 @@ still cause this situation.
 	then you can call :ref:`VIDIOC_TRY_EXT_CTRLS <VIDIOC_G_EXT_CTRLS>` to try to discover the
 	actual control that failed the validation step. Unfortunately,
 	there is no ``TRY`` equivalent for :ref:`VIDIOC_G_EXT_CTRLS <VIDIOC_G_EXT_CTRLS>`.
+    * - __s32
+      - ``request_fd``
+      - File descriptor of the request to be used by this operation. Only
+	valid if ``which`` is set to ``V4L2_CTRL_WHICH_REQUEST_VAL``.
+	If the device does not support requests, then ``EPERM`` will be returned.
+	If requests are supported but an invalid request FD is given, then
+	``ENOENT`` will be returned.
     * - __u32
-      - ``reserved``\ [2]
+      - ``reserved``\ [1]
       - Reserved for future extensions.
 
 	Drivers and applications must set the array to zero.
@@ -362,7 +382,9 @@ ERANGE
 EBUSY
     The control is temporarily not changeable, possibly because another
     applications took over control of the device function this control
-    belongs to.
+    belongs to, or (if the ``which`` field was set to
+    ``V4L2_CTRL_WHICH_REQUEST_VAL``) the request was queued but not yet
+    completed.
 
 ENOSPC
     The space reserved for the control's payload is insufficient. The
@@ -372,3 +394,11 @@ ENOSPC
 EACCES
     Attempt to try or set a read-only control or to get a write-only
     control.
+
+EPERM
+    The ``which`` field was set to ``V4L2_CTRL_WHICH_REQUEST_VAL`` but the
+    device does not support requests.
+
+ENOENT
+    The ``which`` field was set to ``V4L2_CTRL_WHICH_REQUEST_VAL`` but the
+    the given ``request_fd`` was invalid.
