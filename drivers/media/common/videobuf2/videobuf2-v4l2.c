@@ -154,9 +154,177 @@ static void vb2_warn_zero_bytesused(struct vb2_buffer *vb)
 		pr_warn("use the actual size instead.\n");
 }
 
+static int vb2_fill_vb2_v4l2_buffer(struct vb2_buffer *vb, struct v4l2_buffer *b)
+{
+	struct vb2_queue *q = vb->vb2_queue;
+	struct vb2_v4l2_buffer *vbuf = to_vb2_v4l2_buffer(vb);
+	struct vb2_plane *planes = vbuf->planes;
+	unsigned int plane;
+	int ret;
+
+	ret = __verify_length(vb, b);
+	if (ret < 0) {
+		dprintk(1, "plane parameters verification failed: %d\n", ret);
+		return ret;
+	}
+	if (b->field == V4L2_FIELD_ALTERNATE && q->is_output) {
+		/*
+		 * If the format's field is ALTERNATE, then the buffer's field
+		 * should be either TOP or BOTTOM, not ALTERNATE since that
+		 * makes no sense. The driver has to know whether the
+		 * buffer represents a top or a bottom field in order to
+		 * program any DMA correctly. Using ALTERNATE is wrong, since
+		 * that just says that it is either a top or a bottom field,
+		 * but not which of the two it is.
+		 */
+		dprintk(1, "the field is incorrectly set to ALTERNATE for an output buffer\n");
+		return -EINVAL;
+	}
+	vbuf->sequence = 0;
+
+	if (V4L2_TYPE_IS_MULTIPLANAR(b->type)) {
+		switch (b->memory) {
+		case VB2_MEMORY_USERPTR:
+			for (plane = 0; plane < vb->num_planes; ++plane) {
+				planes[plane].m.userptr =
+					b->m.planes[plane].m.userptr;
+				planes[plane].length =
+					b->m.planes[plane].length;
+			}
+			break;
+		case VB2_MEMORY_DMABUF:
+			for (plane = 0; plane < vb->num_planes; ++plane) {
+				planes[plane].m.fd =
+					b->m.planes[plane].m.fd;
+				planes[plane].length =
+					b->m.planes[plane].length;
+			}
+			break;
+		default:
+			for (plane = 0; plane < vb->num_planes; ++plane) {
+				planes[plane].m.offset =
+					vb->planes[plane].m.offset;
+				planes[plane].length =
+					vb->planes[plane].length;
+			}
+			break;
+		}
+
+		/* Fill in driver-provided information for OUTPUT types */
+		if (V4L2_TYPE_IS_OUTPUT(b->type)) {
+			/*
+			 * Will have to go up to b->length when API starts
+			 * accepting variable number of planes.
+			 *
+			 * If bytesused == 0 for the output buffer, then fall
+			 * back to the full buffer size. In that case
+			 * userspace clearly never bothered to set it and
+			 * it's a safe assumption that they really meant to
+			 * use the full plane sizes.
+			 *
+			 * Some drivers, e.g. old codec drivers, use bytesused == 0
+			 * as a way to indicate that streaming is finished.
+			 * In that case, the driver should use the
+			 * allow_zero_bytesused flag to keep old userspace
+			 * applications working.
+			 */
+			for (plane = 0; plane < vb->num_planes; ++plane) {
+				struct vb2_plane *pdst = &planes[plane];
+				struct v4l2_plane *psrc = &b->m.planes[plane];
+
+				if (psrc->bytesused == 0)
+					vb2_warn_zero_bytesused(vb);
+
+				if (vb->vb2_queue->allow_zero_bytesused)
+					pdst->bytesused = psrc->bytesused;
+				else
+					pdst->bytesused = psrc->bytesused ?
+						psrc->bytesused : pdst->length;
+				pdst->data_offset = psrc->data_offset;
+			}
+		}
+	} else {
+		/*
+		 * Single-planar buffers do not use planes array,
+		 * so fill in relevant v4l2_buffer struct fields instead.
+		 * In videobuf we use our internal V4l2_planes struct for
+		 * single-planar buffers as well, for simplicity.
+		 *
+		 * If bytesused == 0 for the output buffer, then fall back
+		 * to the full buffer size as that's a sensible default.
+		 *
+		 * Some drivers, e.g. old codec drivers, use bytesused == 0 as
+		 * a way to indicate that streaming is finished. In that case,
+		 * the driver should use the allow_zero_bytesused flag to keep
+		 * old userspace applications working.
+		 */
+		switch (b->memory) {
+		case VB2_MEMORY_USERPTR:
+			planes[0].m.userptr = b->m.userptr;
+			planes[0].length = b->length;
+			break;
+		case VB2_MEMORY_DMABUF:
+			planes[0].m.fd = b->m.fd;
+			planes[0].length = b->length;
+			break;
+		default:
+			planes[0].m.offset = vb->planes[0].m.offset;
+			planes[0].length = vb->planes[0].length;
+			break;
+		}
+
+		planes[0].data_offset = 0;
+		if (V4L2_TYPE_IS_OUTPUT(b->type)) {
+			if (b->bytesused == 0)
+				vb2_warn_zero_bytesused(vb);
+
+			if (vb->vb2_queue->allow_zero_bytesused)
+				planes[0].bytesused = b->bytesused;
+			else
+				planes[0].bytesused = b->bytesused ?
+					b->bytesused : planes[0].length;
+		} else
+			planes[0].bytesused = 0;
+
+	}
+
+	/* Zero flags that we handle */
+	vbuf->flags = b->flags & ~V4L2_BUFFER_MASK_FLAGS;
+	if (!vb->vb2_queue->copy_timestamp || !V4L2_TYPE_IS_OUTPUT(b->type)) {
+		/*
+		 * Non-COPY timestamps and non-OUTPUT queues will get
+		 * their timestamp and timestamp source flags from the
+		 * queue.
+		 */
+		vbuf->flags &= ~V4L2_BUF_FLAG_TSTAMP_SRC_MASK;
+	}
+
+	if (V4L2_TYPE_IS_OUTPUT(b->type)) {
+		/*
+		 * For output buffers mask out the timecode flag:
+		 * this will be handled later in vb2_qbuf().
+		 * The 'field' is valid metadata for this output buffer
+		 * and so that needs to be copied here.
+		 */
+		vbuf->flags &= ~V4L2_BUF_FLAG_TIMECODE;
+		vbuf->field = b->field;
+	} else {
+		/* Zero any output buffer flags as this is a capture buffer */
+		vbuf->flags &= ~V4L2_BUFFER_OUT_FLAGS;
+		/* Zero last flag, this is a signal from driver to userspace */
+		vbuf->flags &= ~V4L2_BUF_FLAG_LAST;
+	}
+
+	return 0;
+}
+
 static int vb2_queue_or_prepare_buf(struct vb2_queue *q, struct v4l2_buffer *b,
 				    const char *opname)
 {
+	struct vb2_v4l2_buffer *vbuf;
+	struct vb2_buffer *vb;
+	int ret;
+
 	if (b->type != q->type) {
 		dprintk(1, "%s: invalid buffer type\n", opname);
 		return -EINVAL;
@@ -178,7 +346,15 @@ static int vb2_queue_or_prepare_buf(struct vb2_queue *q, struct v4l2_buffer *b,
 		return -EINVAL;
 	}
 
-	return __verify_planes_array(q->bufs[b->index], b);
+	vb = q->bufs[b->index];
+	vbuf = to_vb2_v4l2_buffer(vb);
+	ret = __verify_planes_array(vb, b);
+	if (ret)
+		return ret;
+
+	/* Copy relevant information provided by the userspace */
+	memset(vbuf->planes, 0, sizeof(vbuf->planes[0]) * vb->num_planes);
+	return vb2_fill_vb2_v4l2_buffer(vb, b);
 }
 
 /*
@@ -291,153 +467,22 @@ static void __fill_v4l2_buffer(struct vb2_buffer *vb, void *pb)
  * v4l2_buffer by the userspace. It also verifies that struct
  * v4l2_buffer has a valid number of planes.
  */
-static int __fill_vb2_buffer(struct vb2_buffer *vb,
-		const void *pb, struct vb2_plane *planes)
+static int __fill_vb2_buffer(struct vb2_buffer *vb, struct vb2_plane *planes)
 {
-	struct vb2_queue *q = vb->vb2_queue;
-	const struct v4l2_buffer *b = pb;
 	struct vb2_v4l2_buffer *vbuf = to_vb2_v4l2_buffer(vb);
 	unsigned int plane;
-	int ret;
 
-	ret = __verify_length(vb, b);
-	if (ret < 0) {
-		dprintk(1, "plane parameters verification failed: %d\n", ret);
-		return ret;
-	}
-	if (b->field == V4L2_FIELD_ALTERNATE && q->is_output) {
-		/*
-		 * If the format's field is ALTERNATE, then the buffer's field
-		 * should be either TOP or BOTTOM, not ALTERNATE since that
-		 * makes no sense. The driver has to know whether the
-		 * buffer represents a top or a bottom field in order to
-		 * program any DMA correctly. Using ALTERNATE is wrong, since
-		 * that just says that it is either a top or a bottom field,
-		 * but not which of the two it is.
-		 */
-		dprintk(1, "the field is incorrectly set to ALTERNATE for an output buffer\n");
-		return -EINVAL;
-	}
-	vb->timestamp = 0;
-	vbuf->sequence = 0;
+	if (!vb->vb2_queue->is_output || !vb->vb2_queue->copy_timestamp)
+		vb->timestamp = 0;
 
-	if (V4L2_TYPE_IS_MULTIPLANAR(b->type)) {
-		if (b->memory == VB2_MEMORY_USERPTR) {
-			for (plane = 0; plane < vb->num_planes; ++plane) {
-				planes[plane].m.userptr =
-					b->m.planes[plane].m.userptr;
-				planes[plane].length =
-					b->m.planes[plane].length;
-			}
+	for (plane = 0; plane < vb->num_planes; ++plane) {
+		if (vb->vb2_queue->memory != VB2_MEMORY_MMAP) {
+			planes[plane].m = vbuf->planes[plane].m;
+			planes[plane].length = vbuf->planes[plane].length;
 		}
-		if (b->memory == VB2_MEMORY_DMABUF) {
-			for (plane = 0; plane < vb->num_planes; ++plane) {
-				planes[plane].m.fd =
-					b->m.planes[plane].m.fd;
-				planes[plane].length =
-					b->m.planes[plane].length;
-			}
-		}
-
-		/* Fill in driver-provided information for OUTPUT types */
-		if (V4L2_TYPE_IS_OUTPUT(b->type)) {
-			/*
-			 * Will have to go up to b->length when API starts
-			 * accepting variable number of planes.
-			 *
-			 * If bytesused == 0 for the output buffer, then fall
-			 * back to the full buffer size. In that case
-			 * userspace clearly never bothered to set it and
-			 * it's a safe assumption that they really meant to
-			 * use the full plane sizes.
-			 *
-			 * Some drivers, e.g. old codec drivers, use bytesused == 0
-			 * as a way to indicate that streaming is finished.
-			 * In that case, the driver should use the
-			 * allow_zero_bytesused flag to keep old userspace
-			 * applications working.
-			 */
-			for (plane = 0; plane < vb->num_planes; ++plane) {
-				struct vb2_plane *pdst = &planes[plane];
-				struct v4l2_plane *psrc = &b->m.planes[plane];
-
-				if (psrc->bytesused == 0)
-					vb2_warn_zero_bytesused(vb);
-
-				if (vb->vb2_queue->allow_zero_bytesused)
-					pdst->bytesused = psrc->bytesused;
-				else
-					pdst->bytesused = psrc->bytesused ?
-						psrc->bytesused : pdst->length;
-				pdst->data_offset = psrc->data_offset;
-			}
-		}
-	} else {
-		/*
-		 * Single-planar buffers do not use planes array,
-		 * so fill in relevant v4l2_buffer struct fields instead.
-		 * In videobuf we use our internal V4l2_planes struct for
-		 * single-planar buffers as well, for simplicity.
-		 *
-		 * If bytesused == 0 for the output buffer, then fall back
-		 * to the full buffer size as that's a sensible default.
-		 *
-		 * Some drivers, e.g. old codec drivers, use bytesused == 0 as
-		 * a way to indicate that streaming is finished. In that case,
-		 * the driver should use the allow_zero_bytesused flag to keep
-		 * old userspace applications working.
-		 */
-		if (b->memory == VB2_MEMORY_USERPTR) {
-			planes[0].m.userptr = b->m.userptr;
-			planes[0].length = b->length;
-		}
-
-		if (b->memory == VB2_MEMORY_DMABUF) {
-			planes[0].m.fd = b->m.fd;
-			planes[0].length = b->length;
-		}
-
-		if (V4L2_TYPE_IS_OUTPUT(b->type)) {
-			if (b->bytesused == 0)
-				vb2_warn_zero_bytesused(vb);
-
-			if (vb->vb2_queue->allow_zero_bytesused)
-				planes[0].bytesused = b->bytesused;
-			else
-				planes[0].bytesused = b->bytesused ?
-					b->bytesused : planes[0].length;
-		} else
-			planes[0].bytesused = 0;
-
+		planes[plane].bytesused = vbuf->planes[plane].bytesused;
+		planes[plane].data_offset = vbuf->planes[plane].data_offset;
 	}
-
-	/* Zero flags that the vb2 core handles */
-	vbuf->flags = b->flags & ~V4L2_BUFFER_MASK_FLAGS;
-	if (!vb->vb2_queue->copy_timestamp || !V4L2_TYPE_IS_OUTPUT(b->type)) {
-		/*
-		 * Non-COPY timestamps and non-OUTPUT queues will get
-		 * their timestamp and timestamp source flags from the
-		 * queue.
-		 */
-		vbuf->flags &= ~V4L2_BUF_FLAG_TSTAMP_SRC_MASK;
-	}
-
-	if (V4L2_TYPE_IS_OUTPUT(b->type)) {
-		/*
-		 * For output buffers mask out the timecode flag:
-		 * this will be handled later in vb2_qbuf().
-		 * The 'field' is valid metadata for this output buffer
-		 * and so that needs to be copied here.
-		 */
-		vbuf->flags &= ~V4L2_BUF_FLAG_TIMECODE;
-		vbuf->field = b->field;
-	} else {
-		/* Zero any output buffer flags as this is a capture buffer */
-		vbuf->flags &= ~V4L2_BUFFER_OUT_FLAGS;
-		/* Zero last flag, this is a signal from driver to userspace */
-		vbuf->flags &= ~V4L2_BUF_FLAG_LAST;
-	}
-
 	return 0;
 }
 
