@@ -98,6 +98,17 @@ dequeued, until the :ref:`VIDIOC_STREAMOFF <VIDIOC_STREAMON>` or
 :ref:`VIDIOC_REQBUFS` ioctl is called, or until the
 device is closed.
 
+The ``request_fd`` field can be used when queuing to specify the file
+descriptor of a :ref:`request <media-request-api>`, if requests are
+in use. Setting it means that the buffer will not be passed to the driver
+until the request itself is queued. Also, the driver will apply any
+settings associated with the request for this buffer. This field will
+be ignored unless the ``V4L2_BUF_FLAG_REQUEST_FD`` flag is set.
+
+For :ref:`memory-to-memory devices <codec>` you can specify the
+``request_fd`` only for output buffers, not for capture buffers. Attempting
+to specify this for a capture buffer will result in an ``EINVAL`` error.
+
 Applications call the ``VIDIOC_DQBUF`` ioctl to dequeue a filled
 (capturing) or displayed (output) buffer from the driver's outgoing
 queue. They just set the ``type``, ``memory`` and ``reserved`` fields of
