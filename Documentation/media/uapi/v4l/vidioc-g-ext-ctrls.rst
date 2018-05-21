@@ -95,6 +95,22 @@ appropriate. In the first case the new value is set in struct
 is inappropriate (e.g. the given menu index is not supported by the menu
 control), then this will also result in an ``EINVAL`` error code error.
 
+If ``request_fd`` is set to a not-yet-queued :ref:`request <media-request-api>`
+file descriptor and ``which`` is set to ``V4L2_CTRL_WHICH_REQUEST_VAL``,
+then the controls are not applied immediately when calling
+:ref:`VIDIOC_S_EXT_CTRLS <VIDIOC_G_EXT_CTRLS>`, but instead are applied by
+the driver for the buffer associated with the same request.
+
+An attempt to call :ref:`VIDIOC_S_EXT_CTRLS <VIDIOC_G_EXT_CTRLS>` for a
+request that has already been queued will result in an ``EBUSY`` error.
+
+If ``request_fd`` is specified and ``which`` is set to ``V4L2_CTRL_WHICH_REQUEST_VAL``
+during a call to :ref:`VIDIOC_G_EXT_CTRLS <VIDIOC_G_EXT_CTRLS>`, then the
+returned values will be the values currently set for the request (or the
+hardware value if none is set) if the request has not yet completed, or the
+values of the controls at the time of request completion if it has already
+completed.
+
 The driver will only set/get these controls if all control values are
 correct. This prevents the situation where only some of the controls
 were set/get. Only low-level errors (e. g. a failed i2c command) can
@@ -209,8 +225,10 @@ still cause this situation.
       - ``which``
       - Which value of the control to get/set/try.
 	``V4L2_CTRL_WHICH_CUR_VAL`` will return the current value of the
-	control and ``V4L2_CTRL_WHICH_DEF_VAL`` will return the default
-	value of the control.
+	control, ``V4L2_CTRL_WHICH_DEF_VAL`` will return the default
+	value of the control and ``V4L2_CTRL_WHICH_REQUEST_VAL`` indicates that
+	these controls have to be retrieved from a request or tried/set for
+	a request.
 
 	.. note::
 
@@ -272,8 +290,12 @@ still cause this situation.
 	then you can call :ref:`VIDIOC_TRY_EXT_CTRLS <VIDIOC_G_EXT_CTRLS>` to try to discover the
 	actual control that failed the validation step. Unfortunately,
 	there is no ``TRY`` equivalent for :ref:`VIDIOC_G_EXT_CTRLS <VIDIOC_G_EXT_CTRLS>`.
+    * - __s32
+      - ``request_fd``
+	File descriptor of the request to be used by this operation. Only
+	valid if ``which`` is set to ``V4L2_CTRL_WHICH_REQUEST_VAL``.
     * - __u32
-      - ``reserved``\ [2]
+      - ``reserved``\ [1]
       - Reserved for future extensions.
 
 	Drivers and applications must set the array to zero.
