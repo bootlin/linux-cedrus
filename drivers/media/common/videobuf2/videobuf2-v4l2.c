@@ -378,8 +378,13 @@ static int vb2_queue_or_prepare_buf(struct vb2_queue *q, struct media_device *md
 			return ret;
 	}
 
-	if (!(b->flags & V4L2_BUF_FLAG_REQUEST_FD))
+	if (!(b->flags & V4L2_BUF_FLAG_REQUEST_FD)) {
+		if (q->uses_requests) {
+			dprintk(1, "%s: queue uses requests\n", opname);
+			return -EBUSY;
+		}
 		return 0;
+	}
 
 	/*
 	 * For proper locking when queueing a request you need to be able
