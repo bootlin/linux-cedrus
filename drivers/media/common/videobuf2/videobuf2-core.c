@@ -1500,6 +1500,7 @@ int vb2_core_qbuf(struct vb2_queue *q, unsigned int index, void *pb,
 		if (ret)
 			return ret;
 
+		q->uses_requests = 1;
 		vb->state = VB2_BUF_STATE_IN_REQUEST;
 		/* Fill buffer information for the userspace */
 		if (pb) {
@@ -1813,6 +1814,7 @@ static void __vb2_queue_cancel(struct vb2_queue *q)
 	q->start_streaming_called = 0;
 	q->queued_count = 0;
 	q->error = 0;
+	q->uses_requests = 0;
 
 	/*
 	 * Remove all buffers from videobuf's list...
