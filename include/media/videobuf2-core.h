@@ -204,7 +204,6 @@ enum vb2_io_modes {
  * enum vb2_buffer_state - current video buffer state.
  * @VB2_BUF_STATE_DEQUEUED:	buffer under userspace control.
  * @VB2_BUF_STATE_PREPARING:	buffer is being prepared in videobuf.
- * @VB2_BUF_STATE_PREPARED:	buffer prepared in videobuf and by the driver.
  * @VB2_BUF_STATE_QUEUED:	buffer queued in videobuf, but not in driver.
  * @VB2_BUF_STATE_REQUEUEING:	re-queue a buffer to the driver.
  * @VB2_BUF_STATE_ACTIVE:	buffer queued in driver and possibly used
@@ -218,7 +217,6 @@ enum vb2_io_modes {
 enum vb2_buffer_state {
 	VB2_BUF_STATE_DEQUEUED,
 	VB2_BUF_STATE_PREPARING,
-	VB2_BUF_STATE_PREPARED,
 	VB2_BUF_STATE_QUEUED,
 	VB2_BUF_STATE_REQUEUEING,
 	VB2_BUF_STATE_ACTIVE,
@@ -250,6 +248,8 @@ struct vb2_buffer {
 	/* private: internal use only
 	 *
 	 * state:		current buffer state; do not change
+	 * synced:		this buffer has been synced
+	 * prepared:		this buffer has been prepared
 	 * queued_entry:	entry on the queued buffers list, which holds
 	 *			all buffers queued from userspace
 	 * done_entry:		entry on the list that stores all buffers ready
@@ -257,6 +257,8 @@ struct vb2_buffer {
 	 * vb2_plane:		per-plane information; do not change
 	 */
 	enum vb2_buffer_state	state;
+	bool			synced;
+	bool			prepared;
 
 	struct vb2_plane	planes[VB2_MAX_PLANES];
 	struct list_head	queued_entry;
