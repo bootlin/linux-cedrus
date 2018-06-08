@@ -20,8 +20,8 @@
  * GNU General Public License for more details.
  */
 
-#ifndef _SUNXI_CEDRUS_REGS_H_
-#define _SUNXI_CEDRUS_REGS_H_
+#ifndef _CEDRUS_REGS_H_
+#define _CEDRUS_REGS_H_
 
 /*
  * For more information, consult http://linux-sunxi.org/VE_Register_guide

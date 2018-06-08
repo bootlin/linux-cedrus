@@ -20,12 +20,12 @@
  * GNU General Public License for more details.
  */
 
-#ifndef _SUNXI_CEDRUS_VIDEO_H_
-#define _SUNXI_CEDRUS_VIDEO_H_
+#ifndef _CEDRUS_VIDEO_H_
+#define _CEDRUS_VIDEO_H_
 
-extern const struct v4l2_ioctl_ops sunxi_cedrus_ioctl_ops;
+extern const struct v4l2_ioctl_ops cedrus_ioctl_ops;
 
-int sunxi_cedrus_queue_init(void *priv, struct vb2_queue *src_vq,
+int cedrus_queue_init(void *priv, struct vb2_queue *src_vq,
 			    struct vb2_queue *dst_vq);
 
 #endif

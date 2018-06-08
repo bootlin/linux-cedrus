@@ -20,8 +20,8 @@
  * GNU General Public License for more details.
  */
 
-#ifndef _SUNXI_CEDRUS_COMMON_H_
-#define _SUNXI_CEDRUS_COMMON_H_
+#ifndef _CEDRUS_COMMON_H_
+#define _CEDRUS_COMMON_H_
 
 #include <linux/platform_device.h>
 
@@ -29,49 +29,49 @@
 #include <media/v4l2-device.h>
 #include <media/v4l2-ctrls.h>
 
-#define SUNXI_CEDRUS_NAME	"sunxi-cedrus"
+#define CEDRUS_NAME	"sunxi-cedrus"
 
-enum sunxi_cedrus_control_id {
-	SUNXI_CEDRUS_CTRL_DEC_MPEG2_FRAME_HDR = 0,
-	SUNXI_CEDRUS_CTRL_MAX,
+enum cedrus_control_id {
+	CEDRUS_CTRL_DEC_MPEG2_FRAME_HDR = 0,
+	CEDRUS_CTRL_MAX,
 };
 
-struct sunxi_cedrus_control {
+struct cedrus_control {
 	u32	id;
 	u32	elem_size;
 };
 
-struct sunxi_cedrus_fmt {
+struct cedrus_fmt {
 	u32 fourcc;
 	int depth;
 	u32 types;
 	unsigned int num_planes;
 };
 
-struct sunxi_cedrus_mpeg2_run {
+struct cedrus_mpeg2_run {
 	const struct v4l2_ctrl_mpeg2_frame_hdr		*hdr;
 };
 
-struct sunxi_cedrus_run {
+struct cedrus_run {
 	struct vb2_v4l2_buffer	*src;
 	struct vb2_v4l2_buffer	*dst;
 
 	union {
-		struct sunxi_cedrus_mpeg2_run	mpeg2;
+		struct cedrus_mpeg2_run	mpeg2;
 	};
 };
 
-struct sunxi_cedrus_ctx {
+struct cedrus_ctx {
 	struct v4l2_fh fh;
-	struct sunxi_cedrus_dev	*dev;
+	struct cedrus_dev	*dev;
 
-	struct sunxi_cedrus_fmt *vpu_src_fmt;
+	struct cedrus_fmt *vpu_src_fmt;
 	struct v4l2_pix_format_mplane src_fmt;
-	struct sunxi_cedrus_fmt *vpu_dst_fmt;
+	struct cedrus_fmt *vpu_dst_fmt;
 	struct v4l2_pix_format_mplane dst_fmt;
 
 	struct v4l2_ctrl_handler hdl;
-	struct v4l2_ctrl *ctrls[SUNXI_CEDRUS_CTRL_MAX];
+	struct v4l2_ctrl *ctrls[CEDRUS_CTRL_MAX];
 
 	struct vb2_buffer *dst_bufs[VIDEO_MAX_FRAME];
 
@@ -83,13 +83,13 @@ struct sunxi_cedrus_ctx {
 	struct list_head dst_list;
 };
 
-struct sunxi_cedrus_buffer {
+struct cedrus_buffer {
 	struct vb2_v4l2_buffer vb;
 	enum vb2_buffer_state state;
 	struct list_head list;
 };
 
-struct sunxi_cedrus_dev {
+struct cedrus_dev {
 	struct v4l2_device v4l2_dev;
 	struct video_device vfd;
 	struct media_device mdev;
@@ -114,13 +114,13 @@ struct sunxi_cedrus_dev {
 	struct regmap *syscon;
 };
 
-static inline void sunxi_cedrus_write(struct sunxi_cedrus_dev *dev,
+static inline void cedrus_write(struct cedrus_dev *dev,
 				      u32 reg, u32 val)
 {
 	writel(val, dev->base + reg);
 }
 
-static inline u32 sunxi_cedrus_read(struct sunxi_cedrus_dev *dev, u32 reg)
+static inline u32 cedrus_read(struct cedrus_dev *dev, u32 reg)
 {
 	return readl(dev->base + reg);
 }

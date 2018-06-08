@@ -20,14 +20,14 @@
  * GNU General Public License for more details.
  */
 
-#ifndef _SUNXI_CEDRUS_MPEG2_H_
-#define _SUNXI_CEDRUS_MPEG2_H_
+#ifndef _CEDRUS_MPEG2_H_
+#define _CEDRUS_MPEG2_H_
 
-struct sunxi_cedrus_ctx;
-struct sunxi_cedrus_run;
+struct cedrus_ctx;
+struct cedrus_run;
 
-void sunxi_cedrus_mpeg2_setup(struct sunxi_cedrus_ctx *ctx,
-			      struct sunxi_cedrus_run *run);
-void sunxi_cedrus_mpeg2_trigger(struct sunxi_cedrus_ctx *ctx, bool mpeg1);
+void cedrus_mpeg2_setup(struct cedrus_ctx *ctx,
+			      struct cedrus_run *run);
+void cedrus_mpeg2_trigger(struct cedrus_ctx *ctx, bool mpeg1);
 
 #endif

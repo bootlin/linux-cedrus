@@ -40,8 +40,8 @@
 #define SYSCON_SRAM_CTRL_REG0	0x0
 #define SYSCON_SRAM_C1_MAP_VE	0x7fffffff
 
-int sunxi_cedrus_engine_enable(struct sunxi_cedrus_dev *dev,
-			       enum sunxi_cedrus_engine engine)
+int cedrus_engine_enable(struct cedrus_dev *dev,
+			       enum cedrus_engine engine)
 {
 	u32 reg = 0;
 
@@ -54,7 +54,7 @@ int sunxi_cedrus_engine_enable(struct sunxi_cedrus_dev *dev,
 	reg |= VE_CTRL_CACHE_BUS_BW_128;
 
 	switch (engine) {
-	case SUNXI_CEDRUS_ENGINE_MPEG:
+	case CEDRUS_ENGINE_MPEG:
 		reg |= VE_CTRL_DEC_MODE_MPEG;
 		break;
 
@@ -62,20 +62,20 @@ int sunxi_cedrus_engine_enable(struct sunxi_cedrus_dev *dev,
 		return -EINVAL;
 	}
 
-	sunxi_cedrus_write(dev, VE_CTRL, reg);
+	cedrus_write(dev, VE_CTRL, reg);
 	return 0;
 }
 
-void sunxi_cedrus_engine_disable(struct sunxi_cedrus_dev *dev)
+void cedrus_engine_disable(struct cedrus_dev *dev)
 {
-	sunxi_cedrus_write(dev, VE_CTRL, VE_CTRL_DEC_MODE_DISABLED);
+	cedrus_write(dev, VE_CTRL, VE_CTRL_DEC_MODE_DISABLED);
 }
 
-static irqreturn_t sunxi_cedrus_ve_irq(int irq, void *dev_id)
+static irqreturn_t cedrus_ve_irq(int irq, void *dev_id)
 {
-	struct sunxi_cedrus_dev *dev = dev_id;
-	struct sunxi_cedrus_ctx *ctx;
-	struct sunxi_cedrus_buffer *src_buffer, *dst_buffer;
+	struct cedrus_dev *dev = dev_id;
+	struct cedrus_ctx *ctx;
+	struct cedrus_buffer *src_buffer, *dst_buffer;
 	struct vb2_v4l2_buffer *src_vb, *dst_vb;
 	unsigned long flags;
 	unsigned int value, status;
@@ -83,12 +83,12 @@ static irqreturn_t sunxi_cedrus_ve_irq(int irq, void *dev_id)
 	spin_lock_irqsave(&dev->irq_lock, flags);
 
 	/* Disable MPEG interrupts and stop the MPEG engine */
-	value = sunxi_cedrus_read(dev, VE_MPEG_CTRL);
-	sunxi_cedrus_write(dev, VE_MPEG_CTRL, value & (~0xf));
+	value = cedrus_read(dev, VE_MPEG_CTRL);
+	cedrus_write(dev, VE_MPEG_CTRL, value & (~0xf));
 
-	status = sunxi_cedrus_read(dev, VE_MPEG_STATUS);
-	sunxi_cedrus_write(dev, VE_MPEG_STATUS, 0x0000c00f);
-	sunxi_cedrus_engine_disable(dev);
+	status = cedrus_read(dev, VE_MPEG_STATUS);
+	cedrus_write(dev, VE_MPEG_STATUS, 0x0000c00f);
+	cedrus_engine_disable(dev);
 
 	ctx = v4l2_m2m_get_curr_priv(dev->m2m_dev);
 	if (!ctx) {
@@ -108,8 +108,8 @@ static irqreturn_t sunxi_cedrus_ve_irq(int irq, void *dev_id)
 		return IRQ_HANDLED;
 	}
 
-	src_buffer = container_of(src_vb, struct sunxi_cedrus_buffer, vb);
-	dst_buffer = container_of(dst_vb, struct sunxi_cedrus_buffer, vb);
+	src_buffer = container_of(src_vb, struct cedrus_buffer, vb);
+	dst_buffer = container_of(dst_vb, struct cedrus_buffer, vb);
 
 	/* First bit of MPEG_STATUS indicates success. */
 	if (ctx->job_abort || !(status & 0x01))
@@ -127,7 +127,7 @@ static irqreturn_t sunxi_cedrus_ve_irq(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-int sunxi_cedrus_hw_probe(struct sunxi_cedrus_dev *dev)
+int cedrus_hw_probe(struct cedrus_dev *dev)
 {
 	struct resource *res;
 	int irq_dec;
@@ -138,7 +138,7 @@ int sunxi_cedrus_hw_probe(struct sunxi_cedrus_dev *dev)
 		dev_err(dev->dev, "could not get ve IRQ\n");
 		return -ENXIO;
 	}
-	ret = devm_request_irq(dev->dev, irq_dec, sunxi_cedrus_ve_irq, 0,
+	ret = devm_request_irq(dev->dev, irq_dec, cedrus_ve_irq, 0,
 			       dev_name(dev->dev), dev);
 	if (ret) {
 		dev_err(dev->dev, "could not request ve IRQ\n");
@@ -227,7 +227,7 @@ int sunxi_cedrus_hw_probe(struct sunxi_cedrus_dev *dev)
 	return 0;
 }
 
-void sunxi_cedrus_hw_remove(struct sunxi_cedrus_dev *dev)
+void cedrus_hw_remove(struct cedrus_dev *dev)
 {
 	reset_control_assert(dev->rstc);
 

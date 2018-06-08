@@ -35,10 +35,10 @@
 #include "cedrus_dec.h"
 #include "cedrus_hw.h"
 
-static int sunxi_cedrus_s_ctrl(struct v4l2_ctrl *ctrl)
+static int cedrus_s_ctrl(struct v4l2_ctrl *ctrl)
 {
-	struct sunxi_cedrus_ctx *ctx =
-		container_of(ctrl->handler, struct sunxi_cedrus_ctx, hdl);
+	struct cedrus_ctx *ctx =
+		container_of(ctrl->handler, struct cedrus_ctx, hdl);
 
 	switch (ctrl->id) {
 	case V4L2_CID_MPEG_VIDEO_MPEG2_FRAME_HDR:
@@ -52,19 +52,19 @@ static int sunxi_cedrus_s_ctrl(struct v4l2_ctrl *ctrl)
 	return 0;
 }
 
-static const struct v4l2_ctrl_ops sunxi_cedrus_ctrl_ops = {
-	.s_ctrl = sunxi_cedrus_s_ctrl,
+static const struct v4l2_ctrl_ops cedrus_ctrl_ops = {
+	.s_ctrl = cedrus_s_ctrl,
 };
 
-static const struct sunxi_cedrus_control controls[] = {
-	[SUNXI_CEDRUS_CTRL_DEC_MPEG2_FRAME_HDR] = {
+static const struct cedrus_control controls[] = {
+	[CEDRUS_CTRL_DEC_MPEG2_FRAME_HDR] = {
 		.id		= V4L2_CID_MPEG_VIDEO_MPEG2_FRAME_HDR,
 		.elem_size	= sizeof(struct v4l2_ctrl_mpeg2_frame_hdr),
 	},
 };
 
-static int sunxi_cedrus_init_ctrls(struct sunxi_cedrus_dev *dev,
-				   struct sunxi_cedrus_ctx *ctx)
+static int cedrus_init_ctrls(struct cedrus_dev *dev,
+				   struct cedrus_ctx *ctx)
 {
 	struct v4l2_ctrl_handler *hdl = &ctx->hdl;
 	unsigned int num_ctrls = ARRAY_SIZE(controls);
@@ -79,7 +79,7 @@ static int sunxi_cedrus_init_ctrls(struct sunxi_cedrus_dev *dev,
 	for (i = 0; i < num_ctrls; i++) {
 		struct v4l2_ctrl_config cfg = { 0 };
 
-		cfg.ops = &sunxi_cedrus_ctrl_ops;
+		cfg.ops = &cedrus_ctrl_ops;
 		cfg.elem_size = controls[i].elem_size;
 		cfg.id = controls[i].id;
 
@@ -96,8 +96,8 @@ static int sunxi_cedrus_init_ctrls(struct sunxi_cedrus_dev *dev,
 	return 0;
 }
 
-static void sunxi_cedrus_deinit_ctrls(struct sunxi_cedrus_dev *dev,
-				      struct sunxi_cedrus_ctx *ctx)
+static void cedrus_deinit_ctrls(struct cedrus_dev *dev,
+				      struct cedrus_ctx *ctx)
 {
 	unsigned int num_ctrls = ARRAY_SIZE(controls);
 	unsigned int i;
@@ -107,10 +107,10 @@ static void sunxi_cedrus_deinit_ctrls(struct sunxi_cedrus_dev *dev,
 		ctx->ctrls[0] = NULL;
 }
 
-static int sunxi_cedrus_open(struct file *file)
+static int cedrus_open(struct file *file)
 {
-	struct sunxi_cedrus_dev *dev = video_drvdata(file);
-	struct sunxi_cedrus_ctx *ctx = NULL;
+	struct cedrus_dev *dev = video_drvdata(file);
+	struct cedrus_ctx *ctx = NULL;
 	int rc;
 
 	if (mutex_lock_interruptible(&dev->dev_mutex))
@@ -122,7 +122,7 @@ static int sunxi_cedrus_open(struct file *file)
 		return -ENOMEM;
 	}
 
-	INIT_WORK(&ctx->run_work, sunxi_cedrus_device_work);
+	INIT_WORK(&ctx->run_work, cedrus_device_work);
 
 	INIT_LIST_HEAD(&ctx->src_list);
 	INIT_LIST_HEAD(&ctx->dst_list);
@@ -131,12 +131,12 @@ static int sunxi_cedrus_open(struct file *file)
 	file->private_data = &ctx->fh;
 	ctx->dev = dev;
 
-	rc = sunxi_cedrus_init_ctrls(dev, ctx);
+	rc = cedrus_init_ctrls(dev, ctx);
 	if (rc)
 		goto err_free;
 
 	ctx->fh.m2m_ctx = v4l2_m2m_ctx_init(dev->m2m_dev, ctx,
-					    &sunxi_cedrus_queue_init);
+					    &cedrus_queue_init);
 	if (IS_ERR(ctx->fh.m2m_ctx)) {
 		rc = PTR_ERR(ctx->fh.m2m_ctx);
 		goto err_ctrl_deinit;
@@ -151,25 +151,25 @@ static int sunxi_cedrus_open(struct file *file)
 	return 0;
 
 err_ctrl_deinit:
-	sunxi_cedrus_deinit_ctrls(dev, ctx);
+	cedrus_deinit_ctrls(dev, ctx);
 err_free:
 	kfree(ctx);
 	mutex_unlock(&dev->dev_mutex);
 	return rc;
 }
 
-static int sunxi_cedrus_release(struct file *file)
+static int cedrus_release(struct file *file)
 {
-	struct sunxi_cedrus_dev *dev = video_drvdata(file);
-	struct sunxi_cedrus_ctx *ctx = container_of(file->private_data,
-			struct sunxi_cedrus_ctx, fh);
+	struct cedrus_dev *dev = video_drvdata(file);
+	struct cedrus_ctx *ctx = container_of(file->private_data,
+			struct cedrus_ctx, fh);
 
 	dev_dbg(dev->dev, "Releasing instance %p\n", ctx);
 
 	mutex_lock(&dev->dev_mutex);
 	v4l2_fh_del(&ctx->fh);
 	v4l2_m2m_ctx_release(ctx->fh.m2m_ctx);
-	sunxi_cedrus_deinit_ctrls(dev, ctx);
+	cedrus_deinit_ctrls(dev, ctx);
 	v4l2_fh_exit(&ctx->fh);
 	v4l2_fh_exit(&ctx->fh);
 	kfree(ctx);
@@ -178,37 +178,37 @@ static int sunxi_cedrus_release(struct file *file)
 	return 0;
 }
 
-static const struct v4l2_file_operations sunxi_cedrus_fops = {
+static const struct v4l2_file_operations cedrus_fops = {
 	.owner		= THIS_MODULE,
-	.open		= sunxi_cedrus_open,
-	.release	= sunxi_cedrus_release,
+	.open		= cedrus_open,
+	.release	= cedrus_release,
 	.poll		= v4l2_m2m_fop_poll,
 	.unlocked_ioctl	= video_ioctl2,
 	.mmap		= v4l2_m2m_fop_mmap,
 };
 
-static const struct video_device sunxi_cedrus_video_device = {
-	.name		= SUNXI_CEDRUS_NAME,
+static const struct video_device cedrus_video_device = {
+	.name		= CEDRUS_NAME,
 	.vfl_dir	= VFL_DIR_M2M,
-	.fops		= &sunxi_cedrus_fops,
-	.ioctl_ops	= &sunxi_cedrus_ioctl_ops,
+	.fops		= &cedrus_fops,
+	.ioctl_ops	= &cedrus_ioctl_ops,
 	.minor		= -1,
 	.release	= video_device_release_empty,
 };
 
-static const struct v4l2_m2m_ops sunxi_cedrus_m2m_ops = {
-	.device_run	= sunxi_cedrus_device_run,
-	.job_abort	= sunxi_cedrus_job_abort,
+static const struct v4l2_m2m_ops cedrus_m2m_ops = {
+	.device_run	= cedrus_device_run,
+	.job_abort	= cedrus_job_abort,
 };
 
-static const struct media_device_ops sunxi_cedrus_m2m_media_ops = {
+static const struct media_device_ops cedrus_m2m_media_ops = {
 	.req_validate = vb2_request_validate,
 	.req_queue = vb2_m2m_request_queue,
 };
 
-static int sunxi_cedrus_probe(struct platform_device *pdev)
+static int cedrus_probe(struct platform_device *pdev)
 {
-	struct sunxi_cedrus_dev *dev;
+	struct cedrus_dev *dev;
 	struct video_device *vfd;
 	int ret;
 
@@ -219,7 +219,7 @@ static int sunxi_cedrus_probe(struct platform_device *pdev)
 	dev->dev = &pdev->dev;
 	dev->pdev = pdev;
 
-	ret = sunxi_cedrus_hw_probe(dev);
+	ret = cedrus_hw_probe(dev);
 	if (ret) {
 		dev_err(&pdev->dev, "Failed to probe hardware\n");
 		return ret;
@@ -228,15 +228,15 @@ static int sunxi_cedrus_probe(struct platform_device *pdev)
 	mutex_init(&dev->dev_mutex);
 	spin_lock_init(&dev->irq_lock);
 
-	dev->vfd = sunxi_cedrus_video_device;
+	dev->vfd = cedrus_video_device;
 	vfd = &dev->vfd;
 	vfd->lock = &dev->dev_mutex;
 	vfd->v4l2_dev = &dev->v4l2_dev;
 
 	dev->mdev.dev = &pdev->dev;
-	strlcpy(dev->mdev.model, SUNXI_CEDRUS_NAME, sizeof(dev->mdev.model));
+	strlcpy(dev->mdev.model, CEDRUS_NAME, sizeof(dev->mdev.model));
 	media_device_init(&dev->mdev);
-	dev->mdev.ops = &sunxi_cedrus_m2m_media_ops;
+	dev->mdev.ops = &cedrus_m2m_media_ops;
 	dev->v4l2_dev.mdev = &dev->mdev;
 	dev->pad[0].flags = MEDIA_PAD_FL_SINK;
 	dev->pad[1].flags = MEDIA_PAD_FL_SOURCE;
@@ -256,13 +256,13 @@ static int sunxi_cedrus_probe(struct platform_device *pdev)
 
 	video_set_drvdata(vfd, dev);
 	snprintf(vfd->name, sizeof(vfd->name), "%s",
-		 sunxi_cedrus_video_device.name);
+		 cedrus_video_device.name);
 	v4l2_info(&dev->v4l2_dev,
 		  "Device registered as /dev/video%d\n", vfd->num);
 
 	platform_set_drvdata(pdev, dev);
 
-	dev->m2m_dev = v4l2_m2m_init(&sunxi_cedrus_m2m_ops);
+	dev->m2m_dev = v4l2_m2m_init(&cedrus_m2m_ops);
 	if (IS_ERR(dev->m2m_dev)) {
 		v4l2_err(&dev->v4l2_dev, "Failed to init mem2mem device\n");
 		ret = PTR_ERR(dev->m2m_dev);
@@ -287,11 +287,11 @@ unreg_dev:
 	return ret;
 }
 
-static int sunxi_cedrus_remove(struct platform_device *pdev)
+static int cedrus_remove(struct platform_device *pdev)
 {
-	struct sunxi_cedrus_dev *dev = platform_get_drvdata(pdev);
+	struct cedrus_dev *dev = platform_get_drvdata(pdev);
 
-	v4l2_info(&dev->v4l2_dev, "Removing " SUNXI_CEDRUS_NAME);
+	v4l2_info(&dev->v4l2_dev, "Removing " CEDRUS_NAME);
 
 	if (media_devnode_is_registered(dev->mdev.devnode)) {
 		media_device_unregister(&dev->mdev);
@@ -301,32 +301,32 @@ static int sunxi_cedrus_remove(struct platform_device *pdev)
 	v4l2_m2m_release(dev->m2m_dev);
 	video_unregister_device(&dev->vfd);
 	v4l2_device_unregister(&dev->v4l2_dev);
-	sunxi_cedrus_hw_remove(dev);
+	cedrus_hw_remove(dev);
 
 	return 0;
 }
 
 #ifdef CONFIG_OF
-static const struct of_device_id of_sunxi_cedrus_match[] = {
+static const struct of_device_id of_cedrus_match[] = {
 	{ .compatible = "allwinner,sun4i-a10-video-engine" },
 	{ .compatible = "allwinner,sun5i-a13-video-engine" },
 	{ .compatible = "allwinner,sun7i-a20-video-engine" },
 	{ .compatible = "allwinner,sun8i-a33-video-engine" },
 	{ /* sentinel */ }
 };
-MODULE_DEVICE_TABLE(of, of_sunxi_cedrus_match);
+MODULE_DEVICE_TABLE(of, of_cedrus_match);
 #endif
 
-static struct platform_driver sunxi_cedrus_driver = {
-	.probe		= sunxi_cedrus_probe,
-	.remove		= sunxi_cedrus_remove,
+static struct platform_driver cedrus_driver = {
+	.probe		= cedrus_probe,
+	.remove		= cedrus_remove,
 	.driver		= {
-		.name	= SUNXI_CEDRUS_NAME,
+		.name	= CEDRUS_NAME,
 		.owner = THIS_MODULE,
-		.of_match_table = of_match_ptr(of_sunxi_cedrus_match),
+		.of_match_table = of_match_ptr(of_cedrus_match),
 	},
 };
-module_platform_driver(sunxi_cedrus_driver);
+module_platform_driver(cedrus_driver);
 
 MODULE_LICENSE("GPL v2");
 MODULE_AUTHOR("Florent Revest <florent.revest@free-electrons.com>");

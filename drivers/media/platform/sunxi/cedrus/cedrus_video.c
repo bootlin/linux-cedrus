@@ -33,33 +33,33 @@
 #include "cedrus_hw.h"
 
 /* Flags that indicate a format can be used for capture/output. */
-#define SUNXI_CEDRUS_CAPTURE	BIT(0)
-#define SUNXI_CEDRUS_OUTPUT	BIT(1)
+#define CEDRUS_CAPTURE	BIT(0)
+#define CEDRUS_OUTPUT	BIT(1)
 
-#define SUNXI_CEDRUS_MIN_WIDTH	16U
-#define SUNXI_CEDRUS_MIN_HEIGHT	16U
-#define SUNXI_CEDRUS_MAX_WIDTH	3840U
-#define SUNXI_CEDRUS_MAX_HEIGHT	2160U
+#define CEDRUS_MIN_WIDTH	16U
+#define CEDRUS_MIN_HEIGHT	16U
+#define CEDRUS_MAX_WIDTH	3840U
+#define CEDRUS_MAX_HEIGHT	2160U
 
-static struct sunxi_cedrus_fmt formats[] = {
+static struct cedrus_fmt formats[] = {
 	{
 		.fourcc = V4L2_PIX_FMT_MB32_NV12,
-		.types	= SUNXI_CEDRUS_CAPTURE,
+		.types	= CEDRUS_CAPTURE,
 		.depth = 2,
 		.num_planes = 2,
 	},
 	{
 		.fourcc = V4L2_PIX_FMT_MPEG2_FRAME,
-		.types	= SUNXI_CEDRUS_OUTPUT,
+		.types	= CEDRUS_OUTPUT,
 		.num_planes = 1,
 	},
 };
 
 #define NUM_FORMATS ARRAY_SIZE(formats)
 
-static struct sunxi_cedrus_fmt *find_format(struct v4l2_format *f)
+static struct cedrus_fmt *find_format(struct v4l2_format *f)
 {
-	struct sunxi_cedrus_fmt *fmt;
+	struct cedrus_fmt *fmt;
 	unsigned int k;
 
 	for (k = 0; k < NUM_FORMATS; k++) {
@@ -74,18 +74,18 @@ static struct sunxi_cedrus_fmt *find_format(struct v4l2_format *f)
 	return &formats[k];
 }
 
-static inline struct sunxi_cedrus_ctx *file2ctx(struct file *file)
+static inline struct cedrus_ctx *file2ctx(struct file *file)
 {
-	return container_of(file->private_data, struct sunxi_cedrus_ctx, fh);
+	return container_of(file->private_data, struct cedrus_ctx, fh);
 }
 
 static int vidioc_querycap(struct file *file, void *priv,
 			   struct v4l2_capability *cap)
 {
-	strncpy(cap->driver, SUNXI_CEDRUS_NAME, sizeof(cap->driver) - 1);
-	strncpy(cap->card, SUNXI_CEDRUS_NAME, sizeof(cap->card) - 1);
+	strncpy(cap->driver, CEDRUS_NAME, sizeof(cap->driver) - 1);
+	strncpy(cap->card, CEDRUS_NAME, sizeof(cap->card) - 1);
 	snprintf(cap->bus_info, sizeof(cap->bus_info),
-		 "platform:%s", SUNXI_CEDRUS_NAME);
+		 "platform:%s", CEDRUS_NAME);
 	cap->device_caps = V4L2_CAP_VIDEO_M2M_MPLANE | V4L2_CAP_STREAMING;
 	cap->capabilities = cap->device_caps | V4L2_CAP_DEVICE_CAPS;
 	return 0;
@@ -93,7 +93,7 @@ static int vidioc_querycap(struct file *file, void *priv,
 
 static int enum_fmt(struct v4l2_fmtdesc *f, u32 type)
 {
-	struct sunxi_cedrus_fmt *fmt;
+	struct cedrus_fmt *fmt;
 	int i, num = 0;
 
 	for (i = 0; i < NUM_FORMATS; ++i) {
@@ -121,16 +121,16 @@ static int enum_fmt(struct v4l2_fmtdesc *f, u32 type)
 static int vidioc_enum_fmt_vid_cap(struct file *file, void *priv,
 				   struct v4l2_fmtdesc *f)
 {
-	return enum_fmt(f, SUNXI_CEDRUS_CAPTURE);
+	return enum_fmt(f, CEDRUS_CAPTURE);
 }
 
 static int vidioc_enum_fmt_vid_out(struct file *file, void *priv,
 				   struct v4l2_fmtdesc *f)
 {
-	return enum_fmt(f, SUNXI_CEDRUS_OUTPUT);
+	return enum_fmt(f, CEDRUS_OUTPUT);
 }
 
-static int vidioc_g_fmt(struct sunxi_cedrus_ctx *ctx, struct v4l2_format *f)
+static int vidioc_g_fmt(struct cedrus_ctx *ctx, struct v4l2_format *f)
 {
 	switch (f->type) {
 	case V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE:
@@ -159,7 +159,7 @@ static int vidioc_g_fmt_vid_cap(struct file *file, void *priv,
 	return vidioc_g_fmt(file2ctx(file), f);
 }
 
-static int vidioc_try_fmt(struct v4l2_format *f, struct sunxi_cedrus_fmt *fmt)
+static int vidioc_try_fmt(struct v4l2_format *f, struct cedrus_fmt *fmt)
 {
 	int i;
 	__u32 bpl;
@@ -177,9 +177,9 @@ static int vidioc_try_fmt(struct v4l2_format *f, struct sunxi_cedrus_fmt *fmt)
 	case V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE:
 		/* Limit to hardware min/max. */
 		f->fmt.pix_mp.width = clamp(f->fmt.pix_mp.width,
-			SUNXI_CEDRUS_MIN_WIDTH, SUNXI_CEDRUS_MAX_WIDTH);
+			CEDRUS_MIN_WIDTH, CEDRUS_MAX_WIDTH);
 		f->fmt.pix_mp.height = clamp(f->fmt.pix_mp.height,
-			SUNXI_CEDRUS_MIN_HEIGHT, SUNXI_CEDRUS_MAX_HEIGHT);
+			CEDRUS_MIN_HEIGHT, CEDRUS_MAX_HEIGHT);
 
 		for (i = 0; i < f->fmt.pix_mp.num_planes; ++i) {
 			bpl = (f->fmt.pix_mp.width * fmt->depth) >> 3;
@@ -195,15 +195,15 @@ static int vidioc_try_fmt(struct v4l2_format *f, struct sunxi_cedrus_fmt *fmt)
 static int vidioc_try_fmt_vid_cap(struct file *file, void *priv,
 				  struct v4l2_format *f)
 {
-	struct sunxi_cedrus_fmt *fmt;
-	struct sunxi_cedrus_ctx *ctx = file2ctx(file);
+	struct cedrus_fmt *fmt;
+	struct cedrus_ctx *ctx = file2ctx(file);
 
 	fmt = find_format(f);
 	if (!fmt) {
 		f->fmt.pix_mp.pixelformat = formats[0].fourcc;
 		fmt = find_format(f);
 	}
-	if (!(fmt->types & SUNXI_CEDRUS_CAPTURE)) {
+	if (!(fmt->types & CEDRUS_CAPTURE)) {
 		v4l2_err(&ctx->dev->v4l2_dev,
 			 "Fourcc format (0x%08x) invalid.\n",
 			 f->fmt.pix_mp.pixelformat);
@@ -216,15 +216,15 @@ static int vidioc_try_fmt_vid_cap(struct file *file, void *priv,
 static int vidioc_try_fmt_vid_out(struct file *file, void *priv,
 				  struct v4l2_format *f)
 {
-	struct sunxi_cedrus_fmt *fmt;
-	struct sunxi_cedrus_ctx *ctx = file2ctx(file);
+	struct cedrus_fmt *fmt;
+	struct cedrus_ctx *ctx = file2ctx(file);
 
 	fmt = find_format(f);
 	if (!fmt) {
 		f->fmt.pix_mp.pixelformat = formats[0].fourcc;
 		fmt = find_format(f);
 	}
-	if (!(fmt->types & SUNXI_CEDRUS_OUTPUT)) {
+	if (!(fmt->types & CEDRUS_OUTPUT)) {
 		v4l2_err(&ctx->dev->v4l2_dev,
 			 "Fourcc format (0x%08x) invalid.\n",
 			 f->fmt.pix_mp.pixelformat);
@@ -234,10 +234,10 @@ static int vidioc_try_fmt_vid_out(struct file *file, void *priv,
 	return vidioc_try_fmt(f, fmt);
 }
 
-static int vidioc_s_fmt(struct sunxi_cedrus_ctx *ctx, struct v4l2_format *f)
+static int vidioc_s_fmt(struct cedrus_ctx *ctx, struct v4l2_format *f)
 {
 	struct v4l2_pix_format_mplane *pix_fmt_mp = &f->fmt.pix_mp;
-	struct sunxi_cedrus_fmt *fmt;
+	struct cedrus_fmt *fmt;
 	int i, ret = 0;
 
 	switch (f->type) {
@@ -291,7 +291,7 @@ static int vidioc_s_fmt_vid_out(struct file *file, void *priv,
 	return ret;
 }
 
-const struct v4l2_ioctl_ops sunxi_cedrus_ioctl_ops = {
+const struct v4l2_ioctl_ops cedrus_ioctl_ops = {
 	.vidioc_querycap		= vidioc_querycap,
 
 	.vidioc_enum_fmt_vid_cap	= vidioc_enum_fmt_vid_cap,
@@ -319,11 +319,11 @@ const struct v4l2_ioctl_ops sunxi_cedrus_ioctl_ops = {
 	.vidioc_unsubscribe_event	= v4l2_event_unsubscribe,
 };
 
-static int sunxi_cedrus_queue_setup(struct vb2_queue *vq, unsigned int *nbufs,
+static int cedrus_queue_setup(struct vb2_queue *vq, unsigned int *nbufs,
 				    unsigned int *nplanes, unsigned int sizes[],
 				    struct device *alloc_devs[])
 {
-	struct sunxi_cedrus_ctx *ctx = vb2_get_drv_priv(vq);
+	struct cedrus_ctx *ctx = vb2_get_drv_priv(vq);
 
 	if (*nbufs < 1)
 		*nbufs = 1;
@@ -353,11 +353,11 @@ static int sunxi_cedrus_queue_setup(struct vb2_queue *vq, unsigned int *nbufs,
 	return 0;
 }
 
-static int sunxi_cedrus_buf_init(struct vb2_buffer *vb)
+static int cedrus_buf_init(struct vb2_buffer *vb)
 {
 	struct vb2_queue *vq = vb->vb2_queue;
-	struct sunxi_cedrus_ctx *ctx = container_of(vq->drv_priv,
-			struct sunxi_cedrus_ctx, fh);
+	struct cedrus_ctx *ctx = container_of(vq->drv_priv,
+			struct cedrus_ctx, fh);
 
 	if (vq->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE)
 		ctx->dst_bufs[vb->index] = vb;
@@ -365,19 +365,19 @@ static int sunxi_cedrus_buf_init(struct vb2_buffer *vb)
 	return 0;
 }
 
-static void sunxi_cedrus_buf_cleanup(struct vb2_buffer *vb)
+static void cedrus_buf_cleanup(struct vb2_buffer *vb)
 {
 	struct vb2_queue *vq = vb->vb2_queue;
-	struct sunxi_cedrus_ctx *ctx = container_of(vq->drv_priv,
-			struct sunxi_cedrus_ctx, fh);
+	struct cedrus_ctx *ctx = container_of(vq->drv_priv,
+			struct cedrus_ctx, fh);
 
 	if (vq->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE)
 		ctx->dst_bufs[vb->index] = NULL;
 }
 
-static int sunxi_cedrus_buf_prepare(struct vb2_buffer *vb)
+static int cedrus_buf_prepare(struct vb2_buffer *vb)
 {
-	struct sunxi_cedrus_ctx *ctx = vb2_get_drv_priv(vb->vb2_queue);
+	struct cedrus_ctx *ctx = vb2_get_drv_priv(vb->vb2_queue);
 	struct vb2_queue *vq = vb->vb2_queue;
 	int i;
 
@@ -414,9 +414,9 @@ static int sunxi_cedrus_buf_prepare(struct vb2_buffer *vb)
 	return 0;
 }
 
-static void sunxi_cedrus_stop_streaming(struct vb2_queue *q)
+static void cedrus_stop_streaming(struct vb2_queue *q)
 {
-	struct sunxi_cedrus_ctx *ctx = vb2_get_drv_priv(q);
+	struct cedrus_ctx *ctx = vb2_get_drv_priv(q);
 	struct vb2_v4l2_buffer *vbuf;
 	unsigned long flags;
 
@@ -440,46 +440,46 @@ static void sunxi_cedrus_stop_streaming(struct vb2_queue *q)
 	}
 }
 
-static void sunxi_cedrus_buf_queue(struct vb2_buffer *vb)
+static void cedrus_buf_queue(struct vb2_buffer *vb)
 {
 	struct vb2_v4l2_buffer *vbuf = to_vb2_v4l2_buffer(vb);
-	struct sunxi_cedrus_ctx *ctx = vb2_get_drv_priv(vb->vb2_queue);
+	struct cedrus_ctx *ctx = vb2_get_drv_priv(vb->vb2_queue);
 
 	v4l2_m2m_buf_queue(ctx->fh.m2m_ctx, vbuf);
 }
 
-static void sunxi_cedrus_buf_request_complete(struct vb2_buffer *vb)
+static void cedrus_buf_request_complete(struct vb2_buffer *vb)
 {
-	struct sunxi_cedrus_ctx *ctx = vb2_get_drv_priv(vb->vb2_queue);
+	struct cedrus_ctx *ctx = vb2_get_drv_priv(vb->vb2_queue);
 
 	v4l2_ctrl_request_complete(vb->req_obj.req, &ctx->hdl);
 }
 
-static struct vb2_ops sunxi_cedrus_qops = {
-	.queue_setup		= sunxi_cedrus_queue_setup,
-	.buf_prepare		= sunxi_cedrus_buf_prepare,
-	.buf_init		= sunxi_cedrus_buf_init,
-	.buf_cleanup		= sunxi_cedrus_buf_cleanup,
-	.buf_queue		= sunxi_cedrus_buf_queue,
-	.buf_request_complete	= sunxi_cedrus_buf_request_complete,
-	.stop_streaming		= sunxi_cedrus_stop_streaming,
+static struct vb2_ops cedrus_qops = {
+	.queue_setup		= cedrus_queue_setup,
+	.buf_prepare		= cedrus_buf_prepare,
+	.buf_init		= cedrus_buf_init,
+	.buf_cleanup		= cedrus_buf_cleanup,
+	.buf_queue		= cedrus_buf_queue,
+	.buf_request_complete	= cedrus_buf_request_complete,
+	.stop_streaming		= cedrus_stop_streaming,
 	.wait_prepare		= vb2_ops_wait_prepare,
 	.wait_finish		= vb2_ops_wait_finish,
 };
 
-int sunxi_cedrus_queue_init(void *priv, struct vb2_queue *src_vq,
+int cedrus_queue_init(void *priv, struct vb2_queue *src_vq,
 			    struct vb2_queue *dst_vq)
 {
-	struct sunxi_cedrus_ctx *ctx = priv;
+	struct cedrus_ctx *ctx = priv;
 	int ret;
 
 	src_vq->type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
 	src_vq->io_modes = VB2_MMAP | VB2_DMABUF;
 	src_vq->drv_priv = ctx;
-	src_vq->buf_struct_size = sizeof(struct sunxi_cedrus_buffer);
+	src_vq->buf_struct_size = sizeof(struct cedrus_buffer);
 	src_vq->allow_zero_bytesused = 1;
 	src_vq->min_buffers_needed = 1;
-	src_vq->ops = &sunxi_cedrus_qops;
+	src_vq->ops = &cedrus_qops;
 	src_vq->mem_ops = &vb2_dma_contig_memops;
 	src_vq->timestamp_flags = V4L2_BUF_FLAG_TIMESTAMP_COPY;
 	src_vq->lock = &ctx->dev->dev_mutex;
@@ -492,10 +492,10 @@ int sunxi_cedrus_queue_init(void *priv, struct vb2_queue *src_vq,
 	dst_vq->type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
 	dst_vq->io_modes = VB2_MMAP | VB2_DMABUF;
 	dst_vq->drv_priv = ctx;
-	dst_vq->buf_struct_size = sizeof(struct sunxi_cedrus_buffer);
+	dst_vq->buf_struct_size = sizeof(struct cedrus_buffer);
 	dst_vq->allow_zero_bytesused = 1;
 	dst_vq->min_buffers_needed = 1;
-	dst_vq->ops = &sunxi_cedrus_qops;
+	dst_vq->ops = &cedrus_qops;
 	dst_vq->mem_ops = &vb2_dma_contig_memops;
 	dst_vq->timestamp_flags = V4L2_BUF_FLAG_TIMESTAMP_COPY;
 	dst_vq->lock = &ctx->dev->dev_mutex;

@@ -20,18 +20,18 @@
  * GNU General Public License for more details.
  */
 
-#ifndef _SUNXI_CEDRUS_HW_H_
-#define _SUNXI_CEDRUS_HW_H_
+#ifndef _CEDRUS_HW_H_
+#define _CEDRUS_HW_H_
 
-enum sunxi_cedrus_engine {
-	SUNXI_CEDRUS_ENGINE_MPEG,
+enum cedrus_engine {
+	CEDRUS_ENGINE_MPEG,
 };
 
-int sunxi_cedrus_engine_enable(struct sunxi_cedrus_dev *dev,
-			       enum sunxi_cedrus_engine engine);
-void sunxi_cedrus_engine_disable(struct sunxi_cedrus_dev *dev);
+int cedrus_engine_enable(struct cedrus_dev *dev,
+			       enum cedrus_engine engine);
+void cedrus_engine_disable(struct cedrus_dev *dev);
 
-int sunxi_cedrus_hw_probe(struct sunxi_cedrus_dev *dev);
-void sunxi_cedrus_hw_remove(struct sunxi_cedrus_dev *dev);
+int cedrus_hw_probe(struct cedrus_dev *dev);
+void cedrus_hw_remove(struct cedrus_dev *dev);
 
 #endif

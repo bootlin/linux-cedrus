@@ -20,16 +20,16 @@
  * GNU General Public License for more details.
  */
 
-#ifndef _SUNXI_CEDRUS_DEC_H_
-#define _SUNXI_CEDRUS_DEC_H_
+#ifndef _CEDRUS_DEC_H_
+#define _CEDRUS_DEC_H_
 
-extern const struct v4l2_ioctl_ops sunxi_cedrus_ioctl_ops;
+extern const struct v4l2_ioctl_ops cedrus_ioctl_ops;
 
-void sunxi_cedrus_device_work(struct work_struct *work);
-void sunxi_cedrus_device_run(void *priv);
-void sunxi_cedrus_job_abort(void *priv);
+void cedrus_device_work(struct work_struct *work);
+void cedrus_device_run(void *priv);
+void cedrus_job_abort(void *priv);
 
-int sunxi_cedrus_queue_init(void *priv, struct vb2_queue *src_vq,
+int cedrus_queue_init(void *priv, struct vb2_queue *src_vq,
 			    struct vb2_queue *dst_vq);
 
 #endif

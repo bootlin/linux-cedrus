@@ -32,19 +32,19 @@
 #include "cedrus_dec.h"
 #include "cedrus_hw.h"
 
-static inline void *get_ctrl_ptr(struct sunxi_cedrus_ctx *ctx,
-				 enum sunxi_cedrus_control_id id)
+static inline void *get_ctrl_ptr(struct cedrus_ctx *ctx,
+				 enum cedrus_control_id id)
 {
 	struct v4l2_ctrl *ctrl = ctx->ctrls[id];
 
 	return ctrl->p_cur.p;
 }
 
-void sunxi_cedrus_device_work(struct work_struct *work)
+void cedrus_device_work(struct work_struct *work)
 {
-	struct sunxi_cedrus_ctx *ctx = container_of(work,
-			struct sunxi_cedrus_ctx, run_work);
-	struct sunxi_cedrus_buffer *buffer_entry;
+	struct cedrus_ctx *ctx = container_of(work,
+			struct cedrus_ctx, run_work);
+	struct cedrus_buffer *buffer_entry;
 	struct vb2_v4l2_buffer *src_buf, *dst_buf;
 	unsigned long flags;
 
@@ -57,13 +57,13 @@ void sunxi_cedrus_device_work(struct work_struct *work)
 		return;
 	}
 
-	buffer_entry = list_last_entry(&ctx->src_list, struct sunxi_cedrus_buffer, list);
+	buffer_entry = list_last_entry(&ctx->src_list, struct cedrus_buffer, list);
 	list_del(ctx->src_list.prev);
 
 	src_buf = &buffer_entry->vb;
 	v4l2_m2m_buf_done(src_buf, buffer_entry->state);
 
-	buffer_entry = list_last_entry(&ctx->dst_list, struct sunxi_cedrus_buffer, list);
+	buffer_entry = list_last_entry(&ctx->dst_list, struct cedrus_buffer, list);
 	list_del(ctx->dst_list.prev);
 
 	dst_buf = &buffer_entry->vb;
@@ -74,10 +74,10 @@ void sunxi_cedrus_device_work(struct work_struct *work)
 	v4l2_m2m_job_finish(ctx->dev->m2m_dev, ctx->fh.m2m_ctx);
 }
 
-void sunxi_cedrus_device_run(void *priv)
+void cedrus_device_run(void *priv)
 {
-	struct sunxi_cedrus_ctx *ctx = priv;
-	struct sunxi_cedrus_run run = { 0 };
+	struct cedrus_ctx *ctx = priv;
+	struct cedrus_run run = { 0 };
 	struct media_request *src_req, *dst_req;
 	unsigned long flags;
 	bool mpeg1 = false;
@@ -112,15 +112,15 @@ void sunxi_cedrus_device_run(void *priv)
 
 	switch (ctx->vpu_src_fmt->fourcc) {
 	case V4L2_PIX_FMT_MPEG2_FRAME:
-		if (!ctx->ctrls[SUNXI_CEDRUS_CTRL_DEC_MPEG2_FRAME_HDR]) {
+		if (!ctx->ctrls[CEDRUS_CTRL_DEC_MPEG2_FRAME_HDR]) {
 			v4l2_err(&ctx->dev->v4l2_dev,
 				 "Invalid MPEG2 frame header control\n");
 			ctx->job_abort = 1;
 			goto unlock_complete;
 		}
 
-		run.mpeg2.hdr = get_ctrl_ptr(ctx, SUNXI_CEDRUS_CTRL_DEC_MPEG2_FRAME_HDR);
-		sunxi_cedrus_mpeg2_setup(ctx, &run);
+		run.mpeg2.hdr = get_ctrl_ptr(ctx, CEDRUS_CTRL_DEC_MPEG2_FRAME_HDR);
+		cedrus_mpeg2_setup(ctx, &run);
 
 		mpeg1 = run.mpeg2.hdr->type == MPEG1;
 		break;
@@ -144,7 +144,7 @@ unlock_complete:
 
 	if (!ctx->job_abort) {
 		if (ctx->vpu_src_fmt->fourcc == V4L2_PIX_FMT_MPEG2_FRAME)
-			sunxi_cedrus_mpeg2_trigger(ctx, mpeg1);
+			cedrus_mpeg2_trigger(ctx, mpeg1);
 	} else {
 		v4l2_m2m_buf_done(run.src, VB2_BUF_STATE_ERROR);
 		v4l2_m2m_buf_done(run.dst, VB2_BUF_STATE_ERROR);
@@ -156,9 +156,9 @@ unlock_complete:
 		v4l2_m2m_job_finish(ctx->dev->m2m_dev, ctx->fh.m2m_ctx);
 }
 
-void sunxi_cedrus_job_abort(void *priv)
+void cedrus_job_abort(void *priv)
 {
-	struct sunxi_cedrus_ctx *ctx = priv;
+	struct cedrus_ctx *ctx = priv;
 	struct vb2_v4l2_buffer *src_buf, *dst_buf;
 	unsigned long flags;
 
