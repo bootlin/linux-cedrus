@@ -27,8 +27,7 @@ enum cedrus_engine {
 	CEDRUS_ENGINE_MPEG,
 };
 
-int cedrus_engine_enable(struct cedrus_dev *dev,
-			       enum cedrus_engine engine);
+int cedrus_engine_enable(struct cedrus_dev *dev, enum cedrus_engine engine);
 void cedrus_engine_disable(struct cedrus_dev *dev);
 
 int cedrus_hw_probe(struct cedrus_dev *dev);

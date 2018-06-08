@@ -114,8 +114,7 @@ struct cedrus_dev {
 	struct regmap *syscon;
 };
 
-static inline void cedrus_write(struct cedrus_dev *dev,
-				      u32 reg, u32 val)
+static inline void cedrus_write(struct cedrus_dev *dev, u32 reg, u32 val)
 {
 	writel(val, dev->base + reg);
 }

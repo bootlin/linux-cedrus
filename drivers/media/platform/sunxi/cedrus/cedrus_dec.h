@@ -30,6 +30,6 @@ void cedrus_device_run(void *priv);
 void cedrus_job_abort(void *priv);
 
 int cedrus_queue_init(void *priv, struct vb2_queue *src_vq,
-			    struct vb2_queue *dst_vq);
+		      struct vb2_queue *dst_vq);
 
 #endif

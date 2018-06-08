@@ -26,6 +26,6 @@
 extern const struct v4l2_ioctl_ops cedrus_ioctl_ops;
 
 int cedrus_queue_init(void *priv, struct vb2_queue *src_vq,
-			    struct vb2_queue *dst_vq);
+		      struct vb2_queue *dst_vq);
 
 #endif

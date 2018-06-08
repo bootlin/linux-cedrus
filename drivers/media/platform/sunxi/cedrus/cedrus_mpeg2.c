@@ -27,7 +27,7 @@
 #include "cedrus_regs.h"
 
 static const u8 mpeg_default_intra_quant[64] = {
-	 8, 16, 16, 19, 16, 19, 22, 22,
+	8, 16, 16, 19, 16, 19, 22, 22,
 	22, 22, 22, 22, 26, 24, 26, 27,
 	27, 27, 26, 26, 26, 26, 27, 27,
 	27, 29, 29, 29, 34, 34, 34, 29,
@@ -52,8 +52,7 @@ static const u8 mpeg_default_non_intra_quant[64] = {
 
 #define m_niq(i) ((i << 8) | mpeg_default_non_intra_quant[i])
 
-void cedrus_mpeg2_setup(struct cedrus_ctx *ctx,
-			      struct cedrus_run *run)
+void cedrus_mpeg2_setup(struct cedrus_ctx *ctx, struct cedrus_run *run)
 {
 	struct cedrus_dev *dev = ctx->dev;
 	const struct v4l2_ctrl_mpeg2_frame_hdr *frame_hdr = run->mpeg2.hdr;
@@ -68,7 +67,6 @@ void cedrus_mpeg2_setup(struct cedrus_ctx *ctx,
 	struct vb2_buffer *fwd_vb2_buf, *bwd_vb2_buf;
 	dma_addr_t src_buf_addr, dst_luma_addr, dst_chroma_addr;
 	dma_addr_t fwd_luma = 0, fwd_chroma = 0, bwd_luma = 0, bwd_chroma = 0;
-
 
 	fwd_vb2_buf = ctx->dst_bufs[frame_hdr->forward_ref_index];
 	if (fwd_vb2_buf) {
@@ -143,8 +141,7 @@ void cedrus_mpeg2_setup(struct cedrus_ctx *ctx,
 
 	/* Source beginning and end addresses. */
 	src_buf_addr = vb2_dma_contig_plane_dma_addr(&run->src->vb2_buf, 0);
-	cedrus_write(dev, VE_MPEG_VLD_ADDR,
-			   VE_MPEG_VLD_ADDR_VAL(src_buf_addr));
+	cedrus_write(dev, VE_MPEG_VLD_ADDR, VE_MPEG_VLD_ADDR_VAL(src_buf_addr));
 	cedrus_write(dev, VE_MPEG_VLD_END, src_buf_addr + VBV_SIZE - 1);
 }
 

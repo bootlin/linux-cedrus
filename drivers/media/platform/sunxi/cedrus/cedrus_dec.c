@@ -43,15 +43,14 @@ static inline void *get_ctrl_ptr(struct cedrus_ctx *ctx,
 void cedrus_device_work(struct work_struct *work)
 {
 	struct cedrus_ctx *ctx = container_of(work,
-			struct cedrus_ctx, run_work);
+					      struct cedrus_ctx, run_work);
 	struct cedrus_buffer *buffer_entry;
 	struct vb2_v4l2_buffer *src_buf, *dst_buf;
 	unsigned long flags;
 
 	spin_lock_irqsave(&ctx->dev->irq_lock, flags);
 
-	if (list_empty(&ctx->src_list) ||
-	    list_empty(&ctx->dst_list)) {
+	if (list_empty(&ctx->src_list) || list_empty(&ctx->dst_list)) {
 		pr_err("Empty source and/or destination buffers lists\n");
 		spin_unlock_irqrestore(&ctx->dev->irq_lock, flags);
 		return;
@@ -84,8 +83,7 @@ void cedrus_device_run(void *priv)
 
 	run.src = v4l2_m2m_next_src_buf(ctx->fh.m2m_ctx);
 	if (!run.src) {
-		v4l2_err(&ctx->dev->v4l2_dev,
-			 "No source buffer to prepare\n");
+		v4l2_err(&ctx->dev->v4l2_dev, "No source buffer to prepare\n");
 		return;
 	}
 

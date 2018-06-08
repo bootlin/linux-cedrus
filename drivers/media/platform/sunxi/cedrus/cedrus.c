@@ -63,8 +63,7 @@ static const struct cedrus_control controls[] = {
 	},
 };
 
-static int cedrus_init_ctrls(struct cedrus_dev *dev,
-				   struct cedrus_ctx *ctx)
+static int cedrus_init_ctrls(struct cedrus_dev *dev, struct cedrus_ctx *ctx)
 {
 	struct v4l2_ctrl_handler *hdl = &ctx->hdl;
 	unsigned int num_ctrls = ARRAY_SIZE(controls);
@@ -96,8 +95,7 @@ static int cedrus_init_ctrls(struct cedrus_dev *dev,
 	return 0;
 }
 
-static void cedrus_deinit_ctrls(struct cedrus_dev *dev,
-				      struct cedrus_ctx *ctx)
+static void cedrus_deinit_ctrls(struct cedrus_dev *dev, struct cedrus_ctx *ctx)
 {
 	unsigned int num_ctrls = ARRAY_SIZE(controls);
 	unsigned int i;
@@ -162,7 +160,7 @@ static int cedrus_release(struct file *file)
 {
 	struct cedrus_dev *dev = video_drvdata(file);
 	struct cedrus_ctx *ctx = container_of(file->private_data,
-			struct cedrus_ctx, fh);
+					      struct cedrus_ctx, fh);
 
 	dev_dbg(dev->dev, "Releasing instance %p\n", ctx);
 
@@ -255,8 +253,7 @@ static int cedrus_probe(struct platform_device *pdev)
 	}
 
 	video_set_drvdata(vfd, dev);
-	snprintf(vfd->name, sizeof(vfd->name), "%s",
-		 cedrus_video_device.name);
+	snprintf(vfd->name, sizeof(vfd->name), "%s", cedrus_video_device.name);
 	v4l2_info(&dev->v4l2_dev,
 		  "Device registered as /dev/video%d\n", vfd->num);
 

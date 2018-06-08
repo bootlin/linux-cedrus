@@ -26,8 +26,7 @@
 struct cedrus_ctx;
 struct cedrus_run;
 
-void cedrus_mpeg2_setup(struct cedrus_ctx *ctx,
-			      struct cedrus_run *run);
+void cedrus_mpeg2_setup(struct cedrus_ctx *ctx, struct cedrus_run *run);
 void cedrus_mpeg2_trigger(struct cedrus_ctx *ctx, bool mpeg1);
 
 #endif

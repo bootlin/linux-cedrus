@@ -177,9 +177,10 @@ static int vidioc_try_fmt(struct v4l2_format *f, struct cedrus_fmt *fmt)
 	case V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE:
 		/* Limit to hardware min/max. */
 		f->fmt.pix_mp.width = clamp(f->fmt.pix_mp.width,
-			CEDRUS_MIN_WIDTH, CEDRUS_MAX_WIDTH);
+					    CEDRUS_MIN_WIDTH, CEDRUS_MAX_WIDTH);
 		f->fmt.pix_mp.height = clamp(f->fmt.pix_mp.height,
-			CEDRUS_MIN_HEIGHT, CEDRUS_MAX_HEIGHT);
+					     CEDRUS_MIN_HEIGHT,
+					     CEDRUS_MAX_HEIGHT);
 
 		for (i = 0; i < f->fmt.pix_mp.num_planes; ++i) {
 			bpl = (f->fmt.pix_mp.width * fmt->depth) >> 3;
@@ -320,8 +321,8 @@ const struct v4l2_ioctl_ops cedrus_ioctl_ops = {
 };
 
 static int cedrus_queue_setup(struct vb2_queue *vq, unsigned int *nbufs,
-				    unsigned int *nplanes, unsigned int sizes[],
-				    struct device *alloc_devs[])
+			      unsigned int *nplanes, unsigned int sizes[],
+			      struct device *alloc_devs[])
 {
 	struct cedrus_ctx *ctx = vb2_get_drv_priv(vq);
 
@@ -357,7 +358,7 @@ static int cedrus_buf_init(struct vb2_buffer *vb)
 {
 	struct vb2_queue *vq = vb->vb2_queue;
 	struct cedrus_ctx *ctx = container_of(vq->drv_priv,
-			struct cedrus_ctx, fh);
+					      struct cedrus_ctx, fh);
 
 	if (vq->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE)
 		ctx->dst_bufs[vb->index] = vb;
@@ -369,7 +370,7 @@ static void cedrus_buf_cleanup(struct vb2_buffer *vb)
 {
 	struct vb2_queue *vq = vb->vb2_queue;
 	struct cedrus_ctx *ctx = container_of(vq->drv_priv,
-			struct cedrus_ctx, fh);
+					      struct cedrus_ctx, fh);
 
 	if (vq->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE)
 		ctx->dst_bufs[vb->index] = NULL;
@@ -468,7 +469,7 @@ static struct vb2_ops cedrus_qops = {
 };
 
 int cedrus_queue_init(void *priv, struct vb2_queue *src_vq,
-			    struct vb2_queue *dst_vq)
+		      struct vb2_queue *dst_vq)
 {
 	struct cedrus_ctx *ctx = priv;
 	int ret;

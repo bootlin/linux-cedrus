@@ -40,8 +40,7 @@
 #define SYSCON_SRAM_CTRL_REG0	0x0
 #define SYSCON_SRAM_C1_MAP_VE	0x7fffffff
 
-int cedrus_engine_enable(struct cedrus_dev *dev,
-			       enum cedrus_engine engine)
+int cedrus_engine_enable(struct cedrus_dev *dev, enum cedrus_engine engine)
 {
 	u32 reg = 0;
 
@@ -192,8 +191,7 @@ int cedrus_hw_probe(struct cedrus_dev *dev)
 		dev->syscon = NULL;
 	} else {
 		regmap_write_bits(dev->syscon, SYSCON_SRAM_CTRL_REG0,
-				  SYSCON_SRAM_C1_MAP_VE,
-				  SYSCON_SRAM_C1_MAP_VE);
+				  SYSCON_SRAM_C1_MAP_VE, SYSCON_SRAM_C1_MAP_VE);
 	}
 
 	ret = clk_prepare_enable(dev->ahb_clk);
