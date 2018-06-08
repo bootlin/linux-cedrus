@@ -62,13 +62,13 @@ int sunxi_cedrus_engine_enable(struct sunxi_cedrus_dev *dev,
 		return -EINVAL;
 	}
 
-	sunxi_cedrus_write(dev, reg, VE_CTRL);
+	sunxi_cedrus_write(dev, VE_CTRL, reg);
 	return 0;
 }
 
 void sunxi_cedrus_engine_disable(struct sunxi_cedrus_dev *dev)
 {
-	sunxi_cedrus_write(dev, VE_CTRL_DEC_MODE_DISABLED, VE_CTRL);
+	sunxi_cedrus_write(dev, VE_CTRL, VE_CTRL_DEC_MODE_DISABLED);
 }
 
 static irqreturn_t sunxi_cedrus_ve_irq(int irq, void *dev_id)
@@ -84,10 +84,10 @@ static irqreturn_t sunxi_cedrus_ve_irq(int irq, void *dev_id)
 
 	/* Disable MPEG interrupts and stop the MPEG engine */
 	value = sunxi_cedrus_read(dev, VE_MPEG_CTRL);
-	sunxi_cedrus_write(dev, value & (~0xf), VE_MPEG_CTRL);
+	sunxi_cedrus_write(dev, VE_MPEG_CTRL, value & (~0xf));
 
 	status = sunxi_cedrus_read(dev, VE_MPEG_STATUS);
-	sunxi_cedrus_write(dev, 0x0000c00f, VE_MPEG_STATUS);
+	sunxi_cedrus_write(dev, VE_MPEG_STATUS, 0x0000c00f);
 	sunxi_cedrus_engine_disable(dev);
 
 	ctx = v4l2_m2m_get_curr_priv(dev->m2m_dev);

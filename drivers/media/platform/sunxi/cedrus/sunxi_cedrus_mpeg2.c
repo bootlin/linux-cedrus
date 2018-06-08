@@ -87,13 +87,13 @@ void sunxi_cedrus_mpeg2_setup(struct sunxi_cedrus_ctx *ctx,
 
 	/* Set quantization matrices. */
 	for (i = 0; i < 64; i++) {
-		sunxi_cedrus_write(dev, m_iq(i), VE_MPEG_IQ_MIN_INPUT);
-		sunxi_cedrus_write(dev, m_niq(i), VE_MPEG_IQ_MIN_INPUT);
+		sunxi_cedrus_write(dev, VE_MPEG_IQ_MIN_INPUT, m_iq(i));
+		sunxi_cedrus_write(dev, VE_MPEG_IQ_MIN_INPUT, m_niq(i));
 	}
 
 	/* Set frame dimensions. */
-	sunxi_cedrus_write(dev, width << 8 | height, VE_MPEG_SIZE);
-	sunxi_cedrus_write(dev, width << 20 | height << 4, VE_MPEG_FRAME_SIZE);
+	sunxi_cedrus_write(dev, VE_MPEG_SIZE, width << 8 | height);
+	sunxi_cedrus_write(dev, VE_MPEG_FRAME_SIZE, width << 20 | height << 4);
 
 	/* Set MPEG picture header. */
 	pic_header |= (frame_hdr->picture_coding_type & 0xf) << 28;
@@ -109,43 +109,43 @@ void sunxi_cedrus_mpeg2_setup(struct sunxi_cedrus_ctx *ctx,
 	pic_header |= (frame_hdr->q_scale_type & 0x1) << 4;
 	pic_header |= (frame_hdr->intra_vlc_format & 0x1) << 3;
 	pic_header |= (frame_hdr->alternate_scan & 0x1) << 2;
-	sunxi_cedrus_write(dev, pic_header, VE_MPEG_PIC_HDR);
+	sunxi_cedrus_write(dev, VE_MPEG_PIC_HDR, pic_header);
 
 	/* Enable interrupt and an unknown control flag. */
-	sunxi_cedrus_write(dev, VE_MPEG_CTRL_MPEG2, VE_MPEG_CTRL);
+	sunxi_cedrus_write(dev, VE_MPEG_CTRL, VE_MPEG_CTRL_MPEG2);
 
 	/* Macroblock address. */
-	sunxi_cedrus_write(dev, 0, VE_MPEG_MBA);
+	sunxi_cedrus_write(dev, VE_MPEG_MBA, 0);
 
 	/* Clear previous errors. */
-	sunxi_cedrus_write(dev, 0, VE_MPEG_ERROR);
+	sunxi_cedrus_write(dev, VE_MPEG_ERROR, 0);
 
 	/* Clear correct macroblocks register. */
-	sunxi_cedrus_write(dev, 0, VE_MPEG_CTR_MB);
+	sunxi_cedrus_write(dev, VE_MPEG_CTR_MB, 0);
 
 	/* Forward and backward prediction reference buffers. */
-	sunxi_cedrus_write(dev, fwd_luma, VE_MPEG_FWD_LUMA);
-	sunxi_cedrus_write(dev, fwd_chroma, VE_MPEG_FWD_CHROMA);
-	sunxi_cedrus_write(dev, bwd_luma, VE_MPEG_BACK_LUMA);
-	sunxi_cedrus_write(dev, bwd_chroma, VE_MPEG_BACK_CHROMA);
+	sunxi_cedrus_write(dev, VE_MPEG_FWD_LUMA, fwd_luma);
+	sunxi_cedrus_write(dev, VE_MPEG_FWD_CHROMA, fwd_chroma);
+	sunxi_cedrus_write(dev, VE_MPEG_BACK_LUMA, bwd_luma);
+	sunxi_cedrus_write(dev, VE_MPEG_BACK_CHROMA, bwd_chroma);
 
 	/* Destination luma and chroma buffers. */
 	dst_luma_addr = vb2_dma_contig_plane_dma_addr(&run->dst->vb2_buf, 0);
 	dst_chroma_addr = vb2_dma_contig_plane_dma_addr(&run->dst->vb2_buf, 1);
-	sunxi_cedrus_write(dev, dst_luma_addr, VE_MPEG_REC_LUMA);
-	sunxi_cedrus_write(dev, dst_chroma_addr, VE_MPEG_REC_CHROMA);
-	sunxi_cedrus_write(dev, dst_luma_addr, VE_MPEG_ROT_LUMA);
-	sunxi_cedrus_write(dev, dst_chroma_addr, VE_MPEG_ROT_CHROMA);
+	sunxi_cedrus_write(dev, VE_MPEG_REC_LUMA, dst_luma_addr);
+	sunxi_cedrus_write(dev, VE_MPEG_REC_CHROMA, dst_chroma_addr);
+	sunxi_cedrus_write(dev, VE_MPEG_ROT_LUMA, dst_luma_addr);
+	sunxi_cedrus_write(dev, VE_MPEG_ROT_CHROMA, dst_chroma_addr);
 
 	/* Source offset and length in bits. */
-	sunxi_cedrus_write(dev, frame_hdr->slice_pos, VE_MPEG_VLD_OFFSET);
-	sunxi_cedrus_write(dev, vld_len, VE_MPEG_VLD_LEN);
+	sunxi_cedrus_write(dev, VE_MPEG_VLD_OFFSET, frame_hdr->slice_pos);
+	sunxi_cedrus_write(dev, VE_MPEG_VLD_LEN, vld_len);
 
 	/* Source beginning and end addresses. */
 	src_buf_addr = vb2_dma_contig_plane_dma_addr(&run->src->vb2_buf, 0);
-	sunxi_cedrus_write(dev, VE_MPEG_VLD_ADDR_VAL(src_buf_addr),
-			   VE_MPEG_VLD_ADDR);
-	sunxi_cedrus_write(dev, src_buf_addr + VBV_SIZE - 1, VE_MPEG_VLD_END);
+	sunxi_cedrus_write(dev, VE_MPEG_VLD_ADDR,
+			   VE_MPEG_VLD_ADDR_VAL(src_buf_addr));
+	sunxi_cedrus_write(dev, VE_MPEG_VLD_END, src_buf_addr + VBV_SIZE - 1);
 }
 
 void sunxi_cedrus_mpeg2_trigger(struct sunxi_cedrus_ctx *ctx, bool mpeg1)
@@ -154,7 +154,7 @@ void sunxi_cedrus_mpeg2_trigger(struct sunxi_cedrus_ctx *ctx, bool mpeg1)
 
 	/* Trigger MPEG engine. */
 	if (mpeg1)
-		sunxi_cedrus_write(dev, VE_TRIG_MPEG1, VE_MPEG_TRIGGER);
+		sunxi_cedrus_write(dev, VE_MPEG_TRIGGER, VE_TRIG_MPEG1);
 	else
-		sunxi_cedrus_write(dev, VE_TRIG_MPEG2, VE_MPEG_TRIGGER);
+		sunxi_cedrus_write(dev, VE_MPEG_TRIGGER, VE_TRIG_MPEG2);
 }

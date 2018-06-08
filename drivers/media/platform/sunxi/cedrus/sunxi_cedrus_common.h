@@ -115,7 +115,7 @@ struct sunxi_cedrus_dev {
 };
 
 static inline void sunxi_cedrus_write(struct sunxi_cedrus_dev *dev,
-				      u32 val, u32 reg)
+				      u32 reg, u32 val)
 {
 	writel(val, dev->base + reg);
 }
