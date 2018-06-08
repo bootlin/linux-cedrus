@@ -69,7 +69,7 @@ obj-$(CONFIG_VIDEO_ROCKCHIP_RGA)	+= rockchip/rga/
 obj-y	+= omap/
 
 obj-$(CONFIG_VIDEO_AM437X_VPFE)		+= am437x/
-obj-$(CONFIG_VIDEO_SUNXI_CEDRUS)	+= sunxi/cedrus/
+obj-$(CONFIG_VIDEO_SUNXI)		+= sunxi/
 
 obj-$(CONFIG_VIDEO_XILINX)		+= xilinx/
 

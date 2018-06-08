@@ -30,10 +30,10 @@
 #include <media/v4l2-ctrls.h>
 #include <media/v4l2-mem2mem.h>
 
-#include "sunxi_cedrus_common.h"
-#include "sunxi_cedrus_video.h"
-#include "sunxi_cedrus_dec.h"
-#include "sunxi_cedrus_hw.h"
+#include "cedrus_common.h"
+#include "cedrus_video.h"
+#include "cedrus_dec.h"
+#include "cedrus_hw.h"
 
 static int sunxi_cedrus_s_ctrl(struct v4l2_ctrl *ctrl)
 {

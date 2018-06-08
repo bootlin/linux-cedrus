@@ -1,4 +1,4 @@
-obj-$(CONFIG_VIDEO_SUNXI_CEDRUS) += sunxi-cedrus.o
+obj-$(CONFIG_VIDEO_SUNXI_CEDRUS) += cedrus.o
 
-sunxi-cedrus-y = sunxi_cedrus.o sunxi_cedrus_video.o sunxi_cedrus_hw.o \
-		 sunxi_cedrus_dec.o sunxi_cedrus_mpeg2.o
+cedrus-y = cedrus.o cedrus_video.o cedrus_hw.o \
+	   cedrus_dec.o cedrus_mpeg2.o

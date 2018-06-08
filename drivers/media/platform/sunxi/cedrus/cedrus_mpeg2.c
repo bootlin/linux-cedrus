@@ -22,9 +22,9 @@
 
 #include <media/videobuf2-dma-contig.h>
 
-#include "sunxi_cedrus_common.h"
-#include "sunxi_cedrus_hw.h"
-#include "sunxi_cedrus_regs.h"
+#include "cedrus_common.h"
+#include "cedrus_hw.h"
+#include "cedrus_regs.h"
 
 static const u8 mpeg_default_intra_quant[64] = {
 	 8, 16, 16, 19, 16, 19, 22, 22,

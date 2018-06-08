@@ -33,9 +33,9 @@
 #include <media/videobuf2-core.h>
 #include <media/v4l2-mem2mem.h>
 
-#include "sunxi_cedrus_common.h"
-#include "sunxi_cedrus_hw.h"
-#include "sunxi_cedrus_regs.h"
+#include "cedrus_common.h"
+#include "cedrus_hw.h"
+#include "cedrus_regs.h"
 
 #define SYSCON_SRAM_CTRL_REG0	0x0
 #define SYSCON_SRAM_C1_MAP_VE	0x7fffffff

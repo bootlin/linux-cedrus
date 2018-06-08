@@ -27,10 +27,10 @@
 #include <media/v4l2-event.h>
 #include <media/v4l2-mem2mem.h>
 
-#include "sunxi_cedrus_common.h"
-#include "sunxi_cedrus_mpeg2.h"
-#include "sunxi_cedrus_dec.h"
-#include "sunxi_cedrus_hw.h"
+#include "cedrus_common.h"
+#include "cedrus_mpeg2.h"
+#include "cedrus_dec.h"
+#include "cedrus_hw.h"
 
 /* Flags that indicate a format can be used for capture/output. */
 #define SUNXI_CEDRUS_CAPTURE	BIT(0)
