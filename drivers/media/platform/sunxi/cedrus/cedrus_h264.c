@@ -205,6 +205,50 @@ static void cedrus_write_ref_list1(struct cedrus_ctx *ctx,
 			       CEDRUS_SRAM_H264_REF_LIST_1);
 }
 
+static void cedrus_write_pred_weight_table(struct cedrus_ctx *ctx,
+					   struct cedrus_run *run)
+{
+	const struct v4l2_ctrl_h264_slice_param *slice =
+		run->h264.slice_param;	
+	const struct v4l2_h264_pred_weight_table *pred_weight =
+		&slice->pred_weight_table;
+	struct cedrus_dev *dev = ctx->dev;
+	int i, j, k;
+
+#warning FIXME
+	return;
+
+	cedrus_write(dev, VE_H264_PRED_WEIGHT,
+		     ((pred_weight->chroma_log2_weight_denom & 0xf) << 4) |
+		     ((pred_weight->luma_log2_weight_denom & 0xf) << 0));
+
+	cedrus_write(dev, VE_AVC_SRAM_PORT_OFFSET,
+		     CEDRUS_SRAM_H264_PRED_WEIGHT_TABLE << 2);
+
+	for (i = 0; i < ARRAY_SIZE(pred_weight->weight_factors); i++) {
+		const struct v4l2_h264_weight_factors *factors =
+			&pred_weight->weight_factors[i];
+
+		for (j = 0; j < ARRAY_SIZE(factors->luma_weight); j++) {
+			u32 val;
+
+			val = ((factors->luma_offset[j] & 0x1ff) << 16) |
+				(factors->luma_weight[j] & 0x1ff);
+			cedrus_write(dev, VE_AVC_SRAM_PORT_DATA, val);
+		}
+
+		for (j = 0; j < ARRAY_SIZE(factors->chroma_weight); j++) {
+			for (k = 0; k < ARRAY_SIZE(factors->chroma_weight[0]); k++) {
+				u32 val;
+
+				val = ((factors->chroma_offset[j][k] & 0x1ff) << 16) |
+					(factors->chroma_weight[j][k] & 0x1ff);
+				cedrus_write(dev, VE_AVC_SRAM_PORT_DATA, val);
+			}
+		}
+	}
+}
+
 static void cedrus_write_scaling_lists(struct cedrus_ctx *ctx,
 				       struct cedrus_run *run)
 {
@@ -380,6 +424,7 @@ static void cedrus_h264_setup(struct cedrus_ctx *ctx,
 
 	cedrus_write_scaling_lists(ctx, run);
 	cedrus_write_frame_list(ctx, run);
+	cedrus_write_pred_weight_table(ctx, run);
 	cedrus_set_params(ctx, run);
 }
 
