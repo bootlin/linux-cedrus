@@ -24,7 +24,11 @@
 #define CEDRUS_NAME	"cedrus"
 
 enum cedrus_control_id {
-	CEDRUS_CTRL_DEC_MPEG2_SLICE_HEADER = 0,
+	CEDRUS_CTRL_DEC_H264_DECODE_PARAM,
+	CEDRUS_CTRL_DEC_H264_PPS,
+	CEDRUS_CTRL_DEC_H264_SLICE_PARAM,
+	CEDRUS_CTRL_DEC_H264_SPS,
+	CEDRUS_CTRL_DEC_MPEG2_SLICE_HEADER,
 	CEDRUS_CTRL_MAX,
 };
 
@@ -40,6 +44,13 @@ struct cedrus_fmt {
 	unsigned int	num_planes;
 };
 
+struct cedrus_h264_run {
+	const struct v4l2_ctrl_h264_decode_param	*decode_param;
+	const struct v4l2_ctrl_h264_pps			*pps;
+	const struct v4l2_ctrl_h264_slice_param		*slice_param;
+	const struct v4l2_ctrl_h264_sps			*sps;
+};
+
 struct cedrus_mpeg2_run {
 	const struct v4l2_ctrl_mpeg2_slice_header	*hdr;
 };
@@ -49,6 +60,7 @@ struct cedrus_run {
 	struct vb2_v4l2_buffer	*dst;
 
 	union {
+		struct cedrus_h264_run	h264;
 		struct cedrus_mpeg2_run	mpeg2;
 	};
 };
@@ -80,12 +92,37 @@ struct cedrus_ctx {
 	struct work_struct		run_work;
 	struct list_head		src_list;
 	struct list_head		dst_list;
+
+	union {
+		struct {
+			void		*mv_col_buf;
+			dma_addr_t	mv_col_buf_dma;
+			ssize_t		mv_col_buf_size;
+			void		*neighbor_info_buf;
+			dma_addr_t	neighbor_info_buf_dma;
+			void		*pic_info_buf;
+			dma_addr_t	pic_info_buf_dma;
+		} h264;
+	} codec;
+};
+
+enum cedrus_h264_pic_type {
+	CEDRUS_H264_PIC_TYPE_FRAME	= 0,
+	CEDRUS_H264_PIC_TYPE_FIELD,
+	CEDRUS_H264_PIC_TYPE_MBAFF,
 };
 
 struct cedrus_buffer {
 	struct vb2_v4l2_buffer		vb;
 	enum vb2_buffer_state		state;
 	struct list_head		list;
+
+	union {
+		struct {
+			unsigned int			position;
+			enum cedrus_h264_pic_type	pic_type;
+		} h264;
+	} codec;
 };
 
 static inline
@@ -116,6 +153,7 @@ struct cedrus_dec_ops {
 	void (*trigger)(struct cedrus_ctx *ctx);
 };
 
+extern struct cedrus_dec_ops cedrus_dec_ops_h264;
 extern struct cedrus_dec_ops cedrus_dec_ops_mpeg2;
 
 struct cedrus_dev {

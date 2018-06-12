@@ -44,6 +44,11 @@ static struct cedrus_fmt formats[] = {
 		.types	= CEDRUS_OUTPUT,
 		.num_planes = 1,
 	},
+	{
+		.fourcc = V4L2_PIX_FMT_H264_SLICE,
+		.types	= CEDRUS_OUTPUT,
+		.num_planes = 1,
+	},
 };
 
 #define NUM_FORMATS ARRAY_SIZE(formats)
@@ -417,6 +422,9 @@ static int cedrus_start_streaming(struct vb2_queue *q, unsigned int count)
 	int ret = 0;
 
 	switch (ctx->vpu_src_fmt->fourcc) {
+	case V4L2_PIX_FMT_H264_SLICE:
+		ctx->current_codec = CEDRUS_CODEC_H264;
+		break;
 	case V4L2_PIX_FMT_MPEG2_FRAME:
 		ctx->current_codec = CEDRUS_CODEC_MPEG2;
 		break;

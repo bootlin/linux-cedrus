@@ -109,6 +109,18 @@ void cedrus_device_run(void *priv)
 		run.mpeg2.hdr = get_ctrl_ptr(ctx, CEDRUS_CTRL_DEC_MPEG2_SLICE_HEADER);
 		break;
 
+	case V4L2_PIX_FMT_H264_SLICE:
+		CHECK_CONTROL(ctx, CEDRUS_CTRL_DEC_H264_DECODE_PARAM);
+		CHECK_CONTROL(ctx, CEDRUS_CTRL_DEC_H264_SLICE_PARAM);
+		CHECK_CONTROL(ctx, CEDRUS_CTRL_DEC_H264_SPS);
+		CHECK_CONTROL(ctx, CEDRUS_CTRL_DEC_H264_PPS);
+
+		run.h264.decode_param = get_ctrl_ptr(ctx, CEDRUS_CTRL_DEC_H264_DECODE_PARAM);
+		run.h264.pps = get_ctrl_ptr(ctx, CEDRUS_CTRL_DEC_H264_PPS);
+		run.h264.slice_param = get_ctrl_ptr(ctx, CEDRUS_CTRL_DEC_H264_SLICE_PARAM);
+		run.h264.sps = get_ctrl_ptr(ctx, CEDRUS_CTRL_DEC_H264_SPS);
+		break;
+
 	default:
 		ctx->job_abort = 1;
 	}

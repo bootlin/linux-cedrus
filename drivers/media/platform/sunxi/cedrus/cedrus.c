@@ -34,6 +34,10 @@ static int cedrus_s_ctrl(struct v4l2_ctrl *ctrl)
 	struct cedrus_dev *dev = ctx->dev;
 
 	switch (ctrl->id) {
+	case V4L2_CID_MPEG_VIDEO_H264_DECODE_PARAM:
+	case V4L2_CID_MPEG_VIDEO_H264_SLICE_PARAM:
+	case V4L2_CID_MPEG_VIDEO_H264_SPS:
+	case V4L2_CID_MPEG_VIDEO_H264_PPS:
 	case V4L2_CID_MPEG_VIDEO_MPEG2_SLICE_HEADER:
 		/* This is kept in memory and used directly. */
 		break;
@@ -50,6 +54,22 @@ static const struct v4l2_ctrl_ops cedrus_ctrl_ops = {
 };
 
 static const struct cedrus_control controls[] = {
+	[CEDRUS_CTRL_DEC_H264_DECODE_PARAM] = {
+		.id		= V4L2_CID_MPEG_VIDEO_H264_DECODE_PARAM,
+		.elem_size	= sizeof(struct v4l2_ctrl_h264_decode_param),
+	},
+	[CEDRUS_CTRL_DEC_H264_SLICE_PARAM] = {
+		.id		= V4L2_CID_MPEG_VIDEO_H264_SLICE_PARAM,
+		.elem_size	= sizeof(struct v4l2_ctrl_h264_slice_param),
+	},
+	[CEDRUS_CTRL_DEC_H264_SPS] = {
+		.id		= V4L2_CID_MPEG_VIDEO_H264_SPS,
+		.elem_size	= sizeof(struct v4l2_ctrl_h264_sps),
+	},
+	[CEDRUS_CTRL_DEC_H264_PPS] = {
+		.id		= V4L2_CID_MPEG_VIDEO_H264_PPS,
+		.elem_size	= sizeof(struct v4l2_ctrl_h264_pps),
+	},
 	[CEDRUS_CTRL_DEC_MPEG2_SLICE_HEADER] = {
 		.id		= V4L2_CID_MPEG_VIDEO_MPEG2_SLICE_HEADER,
 		.elem_size	= sizeof(struct v4l2_ctrl_mpeg2_slice_header),
@@ -235,6 +255,7 @@ static int cedrus_probe(struct platform_device *pdev)
 		return ret;
 	}
 
+	dev->dec_ops[CEDRUS_CODEC_H264] = &cedrus_dec_ops_h264;
 	dev->dec_ops[CEDRUS_CODEC_MPEG2] = &cedrus_dec_ops_mpeg2;
 
 	ret = v4l2_device_register(&pdev->dev, &dev->v4l2_dev);
