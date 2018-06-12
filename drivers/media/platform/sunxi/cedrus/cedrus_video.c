@@ -413,6 +413,8 @@ static int cedrus_buf_prepare(struct vb2_buffer *vb)
 static int cedrus_start_streaming(struct vb2_queue *q, unsigned int count)
 {
 	struct cedrus_ctx *ctx = vb2_get_drv_priv(q);
+	struct cedrus_dev *dev = ctx->dev;
+	int ret = 0;
 
 	switch (ctx->vpu_src_fmt->fourcc) {
 	case V4L2_PIX_FMT_MPEG2_FRAME:
@@ -422,16 +424,26 @@ static int cedrus_start_streaming(struct vb2_queue *q, unsigned int count)
 		return -EINVAL;
 	}
 
-	return 0;
+	if (V4L2_TYPE_IS_OUTPUT(q->type) &&
+	    dev->dec_ops[ctx->current_codec]->start)
+		ret = dev->dec_ops[ctx->current_codec]->start(ctx);
+
+	return ret;
 }
 
 static void cedrus_stop_streaming(struct vb2_queue *q)
 {
 	struct cedrus_ctx *ctx = vb2_get_drv_priv(q);
+	struct cedrus_dev *dev = ctx->dev;
 	struct vb2_v4l2_buffer *vbuf;
 	unsigned long flags;
 
 	flush_scheduled_work();
+
+	if (V4L2_TYPE_IS_OUTPUT(q->type) &&
+	    dev->dec_ops[ctx->current_codec]->stop)
+		dev->dec_ops[ctx->current_codec]->stop(ctx);
+
 	for (;;) {
 		spin_lock_irqsave(&ctx->dev->irq_lock, flags);
 
