@@ -81,6 +81,18 @@ struct cedrus_buffer {
 	struct list_head		list;
 };
 
+static inline
+struct cedrus_buffer *vb2_v4l2_to_cedrus_buffer(const struct vb2_v4l2_buffer *p)
+{
+	return container_of(p, struct cedrus_buffer, vb);
+}
+
+static inline
+struct cedrus_buffer *vb2_to_cedrus_buffer(const struct vb2_buffer *p)
+{
+	return vb2_v4l2_to_cedrus_buffer(to_vb2_v4l2_buffer(p));
+}
+
 struct cedrus_dev {
 	struct v4l2_device	v4l2_dev;
 	struct video_device	vfd;

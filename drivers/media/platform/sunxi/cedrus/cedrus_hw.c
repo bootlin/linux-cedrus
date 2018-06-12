@@ -98,8 +98,8 @@ static irqreturn_t cedrus_ve_irq(int irq, void *data)
 		return IRQ_HANDLED;
 	}
 
-	src_buffer = container_of(src_vb, struct cedrus_buffer, vb);
-	dst_buffer = container_of(dst_vb, struct cedrus_buffer, vb);
+	src_buffer = vb2_v4l2_to_cedrus_buffer(src_vb);
+	dst_buffer = vb2_v4l2_to_cedrus_buffer(dst_vb);
 
 	/* First bit of MPEG_STATUS indicates success. */
 	if (ctx->job_abort || !(status & 0x01))
