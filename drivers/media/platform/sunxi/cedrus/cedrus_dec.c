@@ -97,15 +97,16 @@ void cedrus_device_run(void *priv)
 
 	spin_lock_irqsave(&ctx->dev->irq_lock, flags);
 
+#define CHECK_CONTROL(ctx, ctrl)					\
+	if (!ctx->ctrls[(ctrl)]) {					\
+		v4l2_err(&(ctx)->dev->v4l2_dev, "Invalid " #ctrl " control\n"); \
+		(ctx)->job_abort = 1;					\
+		goto unlock_complete;					\
+	}
+
 	switch (ctx->vpu_src_fmt->fourcc) {
 	case V4L2_PIX_FMT_MPEG2_SLICE:
-		if (!ctx->ctrls[CEDRUS_CTRL_DEC_MPEG2_SLICE_HEADER]) {
-			v4l2_err(&dev->v4l2_dev,
-				 "Invalid MPEG2 frame header control\n");
-			ctx->job_abort = 1;
-			goto unlock_complete;
-		}
-
+		CHECK_CONTROL(ctx, CEDRUS_CTRL_DEC_MPEG2_SLICE_HEADER);
 		run.mpeg2.hdr = get_ctrl_ptr(ctx, CEDRUS_CTRL_DEC_MPEG2_SLICE_HEADER);
 		cedrus_mpeg2_setup(ctx, &run);
 		break;
@@ -113,6 +114,7 @@ void cedrus_device_run(void *priv)
 	default:
 		ctx->job_abort = 1;
 	}
+#undef CHECK_CONTROL
 
 unlock_complete:
 	spin_unlock_irqrestore(&ctx->dev->irq_lock, flags);
