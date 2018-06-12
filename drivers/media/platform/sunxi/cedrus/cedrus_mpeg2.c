@@ -44,6 +44,35 @@ static const u8 mpeg_default_non_intra_quant[64] = {
 
 #define m_niq(i) ((i << 8) | mpeg_default_non_intra_quant[i])
 
+static enum cedrus_irq_status cedrus_mpeg2_irq_status(struct cedrus_ctx *ctx)
+{
+	struct cedrus_dev *dev = ctx->dev;
+	u32 reg = cedrus_read(dev, VE_MPEG_STATUS) & 0x7;
+
+	if (!reg)
+		return CEDRUS_IRQ_NONE;
+
+	if (reg & (BIT(1) | BIT(2)))
+		return CEDRUS_IRQ_ERROR;
+
+	return CEDRUS_IRQ_OK;
+}
+
+static void cedrus_mpeg2_irq_clear(struct cedrus_ctx *ctx)
+{
+	struct cedrus_dev *dev = ctx->dev;
+
+	cedrus_write(dev, VE_MPEG_STATUS, GENMASK(2, 0));
+}
+
+static void cedrus_mpeg2_irq_disable(struct cedrus_ctx *ctx)
+{
+	struct cedrus_dev *dev = ctx->dev;
+	u32 reg = cedrus_read(dev, VE_MPEG_CTRL) & ~BIT(3);
+
+	cedrus_write(dev, VE_MPEG_CTRL, reg);
+}
+
 static void cedrus_mpeg2_setup(struct cedrus_ctx *ctx, struct cedrus_run *run)
 {
 	struct cedrus_dev *dev = ctx->dev;
@@ -146,6 +175,9 @@ static void cedrus_mpeg2_trigger(struct cedrus_ctx *ctx)
 }
 
 struct cedrus_dec_ops cedrus_dec_ops_mpeg2 = {
+	.irq_clear	= cedrus_mpeg2_irq_clear,
+	.irq_disable	= cedrus_mpeg2_irq_disable,
+	.irq_status	= cedrus_mpeg2_irq_status,
 	.setup		= cedrus_mpeg2_setup,
 	.trigger	= cedrus_mpeg2_trigger,
 };

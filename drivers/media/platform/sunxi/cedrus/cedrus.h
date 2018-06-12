@@ -100,7 +100,16 @@ struct cedrus_buffer *vb2_to_cedrus_buffer(const struct vb2_buffer *p)
 	return vb2_v4l2_to_cedrus_buffer(to_vb2_v4l2_buffer(p));
 }
 
+enum cedrus_irq_status {
+	CEDRUS_IRQ_NONE,
+	CEDRUS_IRQ_ERROR,
+	CEDRUS_IRQ_OK,
+};
+
 struct cedrus_dec_ops {
+	void (*irq_clear)(struct cedrus_ctx *ctx);
+	void (*irq_disable)(struct cedrus_ctx *ctx);
+	enum cedrus_irq_status (*irq_status)(struct cedrus_ctx *ctx);
 	void (*setup)(struct cedrus_ctx *ctx, struct cedrus_run *run);
 	void (*trigger)(struct cedrus_ctx *ctx);
 };

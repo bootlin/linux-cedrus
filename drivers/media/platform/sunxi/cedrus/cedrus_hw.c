@@ -65,18 +65,10 @@ static irqreturn_t cedrus_ve_irq(int irq, void *data)
 	struct cedrus_ctx *ctx;
 	struct cedrus_buffer *src_buffer, *dst_buffer;
 	struct vb2_v4l2_buffer *src_vb, *dst_vb;
+	enum cedrus_irq_status status;
 	unsigned long flags;
-	unsigned int value, status;
 
 	spin_lock_irqsave(&dev->irq_lock, flags);
-
-	/* Disable MPEG interrupts and stop the MPEG engine. */
-	value = cedrus_read(dev, VE_MPEG_CTRL);
-	cedrus_write(dev, VE_MPEG_CTRL, value & (~0xf));
-
-	status = cedrus_read(dev, VE_MPEG_STATUS);
-	cedrus_write(dev, VE_MPEG_STATUS, 0x0000c00f);
-	cedrus_engine_disable(dev);
 
 	ctx = v4l2_m2m_get_curr_priv(dev->m2m_dev);
 	if (!ctx) {
@@ -84,8 +76,17 @@ static irqreturn_t cedrus_ve_irq(int irq, void *data)
 			 "Instance released before the end of transaction\n");
 		spin_unlock_irqrestore(&dev->irq_lock, flags);
 
-		return IRQ_HANDLED;
+		return IRQ_NONE;
 	}
+
+	status = dev->dec_ops[ctx->current_codec]->irq_status(ctx);
+	if (status == CEDRUS_IRQ_NONE) {
+		spin_unlock_irqrestore(&dev->irq_lock, flags);
+		return IRQ_NONE;
+	}
+
+	dev->dec_ops[ctx->current_codec]->irq_disable(ctx);
+	dev->dec_ops[ctx->current_codec]->irq_clear(ctx);
 
 	src_vb = v4l2_m2m_src_buf_remove(ctx->fh.m2m_ctx);
 	dst_vb = v4l2_m2m_dst_buf_remove(ctx->fh.m2m_ctx);
