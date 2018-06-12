@@ -20,7 +20,6 @@
 #include <media/v4l2-mem2mem.h>
 
 #include "cedrus.h"
-#include "cedrus_mpeg2.h"
 #include "cedrus_dec.h"
 #include "cedrus_hw.h"
 
@@ -411,6 +410,21 @@ static int cedrus_buf_prepare(struct vb2_buffer *vb)
 	return 0;
 }
 
+static int cedrus_start_streaming(struct vb2_queue *q, unsigned int count)
+{
+	struct cedrus_ctx *ctx = vb2_get_drv_priv(q);
+
+	switch (ctx->vpu_src_fmt->fourcc) {
+	case V4L2_PIX_FMT_MPEG2_FRAME:
+		ctx->current_codec = CEDRUS_CODEC_MPEG2;
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
 static void cedrus_stop_streaming(struct vb2_queue *q)
 {
 	struct cedrus_ctx *ctx = vb2_get_drv_priv(q);
@@ -459,6 +473,7 @@ static struct vb2_ops cedrus_qops = {
 	.buf_cleanup		= cedrus_buf_cleanup,
 	.buf_queue		= cedrus_buf_queue,
 	.buf_request_complete	= cedrus_buf_request_complete,
+	.start_streaming	= cedrus_start_streaming,
 	.stop_streaming		= cedrus_stop_streaming,
 	.wait_prepare		= vb2_ops_wait_prepare,
 	.wait_finish		= vb2_ops_wait_finish,

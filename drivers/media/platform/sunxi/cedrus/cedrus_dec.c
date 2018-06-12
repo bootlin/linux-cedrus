@@ -20,7 +20,6 @@
 #include <media/v4l2-mem2mem.h>
 
 #include "cedrus.h"
-#include "cedrus_mpeg2.h"
 #include "cedrus_dec.h"
 #include "cedrus_hw.h"
 
@@ -108,13 +107,15 @@ void cedrus_device_run(void *priv)
 	case V4L2_PIX_FMT_MPEG2_SLICE:
 		CHECK_CONTROL(ctx, CEDRUS_CTRL_DEC_MPEG2_SLICE_HEADER);
 		run.mpeg2.hdr = get_ctrl_ptr(ctx, CEDRUS_CTRL_DEC_MPEG2_SLICE_HEADER);
-		cedrus_mpeg2_setup(ctx, &run);
 		break;
 
 	default:
 		ctx->job_abort = 1;
 	}
 #undef CHECK_CONTROL
+
+	if (!ctx->job_abort)
+		dev->dec_ops[ctx->current_codec]->setup(ctx, &run);
 
 unlock_complete:
 	spin_unlock_irqrestore(&ctx->dev->irq_lock, flags);
@@ -127,8 +128,7 @@ unlock_complete:
 	spin_lock_irqsave(&ctx->dev->irq_lock, flags);
 
 	if (!ctx->job_abort) {
-		if (ctx->vpu_src_fmt->fourcc == V4L2_PIX_FMT_MPEG2_SLICE)
-			cedrus_mpeg2_trigger(ctx);
+		dev->dec_ops[ctx->current_codec]->trigger(ctx);
 	} else {
 		v4l2_m2m_buf_done(run.src, VB2_BUF_STATE_ERROR);
 		v4l2_m2m_buf_done(run.dst, VB2_BUF_STATE_ERROR);

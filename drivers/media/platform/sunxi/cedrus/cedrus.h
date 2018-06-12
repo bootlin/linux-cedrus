@@ -67,6 +67,7 @@ struct cedrus_ctx {
 	struct v4l2_pix_format_mplane	src_fmt;
 	struct cedrus_fmt		*vpu_dst_fmt;
 	struct v4l2_pix_format_mplane	dst_fmt;
+	enum cedrus_codec		current_codec;
 
 	struct v4l2_ctrl_handler	hdl;
 	struct v4l2_ctrl		*ctrls[CEDRUS_CTRL_MAX];
@@ -99,6 +100,13 @@ struct cedrus_buffer *vb2_to_cedrus_buffer(const struct vb2_buffer *p)
 	return vb2_v4l2_to_cedrus_buffer(to_vb2_v4l2_buffer(p));
 }
 
+struct cedrus_dec_ops {
+	void (*setup)(struct cedrus_ctx *ctx, struct cedrus_run *run);
+	void (*trigger)(struct cedrus_ctx *ctx);
+};
+
+extern struct cedrus_dec_ops cedrus_dec_ops_mpeg2;
+
 struct cedrus_dev {
 	struct v4l2_device	v4l2_dev;
 	struct video_device	vfd;
@@ -120,6 +128,8 @@ struct cedrus_dev {
 	struct clk		*ram_clk;
 
 	struct reset_control	*rstc;
+
+	struct cedrus_dec_ops	*dec_ops[CEDRUS_CODEC_LAST];
 };
 
 static inline void cedrus_write(struct cedrus_dev *dev, u32 reg, u32 val)

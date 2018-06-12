@@ -44,7 +44,7 @@ static const u8 mpeg_default_non_intra_quant[64] = {
 
 #define m_niq(i) ((i << 8) | mpeg_default_non_intra_quant[i])
 
-void cedrus_mpeg2_setup(struct cedrus_ctx *ctx, struct cedrus_run *run)
+static void cedrus_mpeg2_setup(struct cedrus_ctx *ctx, struct cedrus_run *run)
 {
 	struct cedrus_dev *dev = ctx->dev;
 	const struct v4l2_ctrl_mpeg2_slice_header *frame_hdr = run->mpeg2.hdr;
@@ -137,10 +137,15 @@ void cedrus_mpeg2_setup(struct cedrus_ctx *ctx, struct cedrus_run *run)
 	cedrus_write(dev, VE_MPEG_VLD_END, src_buf_addr + VBV_SIZE - 1);
 }
 
-void cedrus_mpeg2_trigger(struct cedrus_ctx *ctx)
+static void cedrus_mpeg2_trigger(struct cedrus_ctx *ctx)
 {
 	struct cedrus_dev *dev = ctx->dev;
 
 	/* Trigger MPEG engine. */
 	cedrus_write(dev, VE_MPEG_TRIGGER, VE_TRIG_MPEG2);
 }
+
+struct cedrus_dec_ops cedrus_dec_ops_mpeg2 = {
+	.setup		= cedrus_mpeg2_setup,
+	.trigger	= cedrus_mpeg2_trigger,
+};
