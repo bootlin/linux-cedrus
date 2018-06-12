@@ -28,7 +28,7 @@
 #include "cedrus_hw.h"
 #include "cedrus_regs.h"
 
-int cedrus_engine_enable(struct cedrus_dev *dev, enum cedrus_engine engine)
+int cedrus_engine_enable(struct cedrus_dev *dev, enum cedrus_codec codec)
 {
 	u32 reg = 0;
 
@@ -40,8 +40,8 @@ int cedrus_engine_enable(struct cedrus_dev *dev, enum cedrus_engine engine)
 
 	reg |= VE_CTRL_CACHE_BUS_BW_128;
 
-	switch (engine) {
-	case CEDRUS_ENGINE_MPEG:
+	switch (codec) {
+	case CEDRUS_CODEC_MPEG2:
 		reg |= VE_CTRL_DEC_MODE_MPEG;
 		break;
 

@@ -53,6 +53,12 @@ struct cedrus_run {
 	};
 };
 
+enum cedrus_codec {
+	CEDRUS_CODEC_MPEG2,
+
+	CEDRUS_CODEC_LAST,
+};
+
 struct cedrus_ctx {
 	struct v4l2_fh			fh;
 	struct cedrus_dev		*dev;

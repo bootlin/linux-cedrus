@@ -73,7 +73,7 @@ void cedrus_mpeg2_setup(struct cedrus_ctx *ctx, struct cedrus_run *run)
 	}
 
 	/* Activate MPEG engine. */
-	cedrus_engine_enable(dev, CEDRUS_ENGINE_MPEG);
+	cedrus_engine_enable(dev, CEDRUS_CODEC_MPEG2);
 
 	/* Set quantization matrices. */
 	for (i = 0; i < 64; i++) {
