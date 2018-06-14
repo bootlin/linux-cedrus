@@ -3779,6 +3779,9 @@ void v4l2_ctrl_request_setup(struct media_request *req,
 	if (!req || !main_hdl)
 		return;
 
+	if (WARN_ON(req->state != MEDIA_REQUEST_STATE_QUEUED))
+		return;
+
 	obj = media_request_object_find(req, &req_ops, main_hdl);
 	if (!obj)
 		return;
@@ -3787,8 +3790,6 @@ void v4l2_ctrl_request_setup(struct media_request *req,
 		return;
 	}
 	hdl = container_of(obj, struct v4l2_ctrl_handler, req_obj);
-
-	mutex_lock(hdl->lock);
 
 	list_for_each_entry(ref, &hdl->ctrl_refs, node)
 		ref->req_done = false;
@@ -3859,7 +3860,6 @@ void v4l2_ctrl_request_setup(struct media_request *req,
 		v4l2_ctrl_unlock(master);
 	}
 
-	mutex_unlock(hdl->lock);
 	media_request_object_put(obj);
 }
 EXPORT_SYMBOL(v4l2_ctrl_request_setup);
