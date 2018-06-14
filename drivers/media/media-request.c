@@ -42,14 +42,14 @@ static void media_request_clean(struct media_request *req)
 
 	/* Just a sanity check. No other code path is allowed to change this. */
 	WARN_ON(req->state != MEDIA_REQUEST_STATE_CLEANING);
-	WARN_ON(refcount_read(&req->updating_count));
+	WARN_ON(req->updating_count);
 
 	list_for_each_entry_safe(obj, obj_safe, &req->objects, list) {
 		media_request_object_unbind(obj);
 		media_request_object_put(obj);
 	}
 
-	refcount_set(&req->updating_count, 0);
+	req->updating_count = 0;
 	WARN_ON(req->num_incomplete_objects);
 	req->num_incomplete_objects = 0;
 	wake_up_interruptible_all(&req->poll_wait);
@@ -310,7 +310,7 @@ int media_request_alloc(struct media_device *mdev,
 	INIT_LIST_HEAD(&req->objects);
 	spin_lock_init(&req->lock);
 	init_waitqueue_head(&req->poll_wait);
-	refcount_set(&req->updating_count, 0);
+	req->updating_count = 0;
 
 	alloc->fd = fd;
 

@@ -63,7 +63,7 @@ struct media_request {
 	struct kref kref;
 	char debug_str[TASK_COMM_LEN + 11];
 	enum media_request_state state;
-	refcount_t updating_count;
+	unsigned int updating_count;
 	struct list_head objects;
 	unsigned int num_incomplete_objects;
 	struct wait_queue_head poll_wait;
@@ -92,7 +92,7 @@ media_request_lock_for_update(struct media_request *req)
 	if (req->state == MEDIA_REQUEST_STATE_IDLE ||
 	    req->state == MEDIA_REQUEST_STATE_UPDATING) {
 		req->state = MEDIA_REQUEST_STATE_UPDATING;
-		refcount_inc(&req->updating_count);
+		req->updating_count++;
 	} else {
 		ret = -EBUSY;
 	}
@@ -115,7 +115,8 @@ static inline void media_request_unlock_for_update(struct media_request *req)
 	unsigned long flags;
 
 	spin_lock_irqsave(&req->lock, flags);
-	if (refcount_dec_and_test(&req->updating_count))
+	WARN_ON(req->updating_count <= 0);
+	if (!--req->updating_count)
 		req->state = MEDIA_REQUEST_STATE_IDLE;
 	spin_unlock_irqrestore(&req->lock, flags);
 }
