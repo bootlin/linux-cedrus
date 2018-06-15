@@ -60,6 +60,11 @@ Compressed Formats
       - ``V4L2_PIX_FMT_MPEG2``
       - 'MPG2'
       - MPEG2 video elementary stream.
+    * .. _V4L2-PIX-FMT-MPEG2-SLICE:
+
+      - ``V4L2_PIX_FMT_MPEG2_SLICE``
+      - 'MG2S'
+      - MPEG2 parsed slice data, as extracted from the MPEG2 bitstream.
     * .. _V4L2-PIX-FMT-MPEG4:
 
       - ``V4L2_PIX_FMT_MPEG4``

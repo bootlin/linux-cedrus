@@ -826,6 +826,7 @@ const char *v4l2_ctrl_get_name(u32 id)
 	case V4L2_CID_MPEG_VIDEO_MV_V_SEARCH_RANGE:		return "Vertical MV Search Range";
 	case V4L2_CID_MPEG_VIDEO_REPEAT_SEQ_HEADER:		return "Repeat Sequence Header";
 	case V4L2_CID_MPEG_VIDEO_FORCE_KEY_FRAME:		return "Force Key Frame";
+	case V4L2_CID_MPEG_VIDEO_MPEG2_SLICE_HEADER:		return "MPEG2 Slice Header";
 
 	/* VPX controls */
 	case V4L2_CID_MPEG_VIDEO_VPX_NUM_PARTITIONS:		return "VPX Number of Partitions";
@@ -1271,6 +1272,9 @@ void v4l2_ctrl_fill(u32 id, const char **name, enum v4l2_ctrl_type *type,
 	case V4L2_CID_RDS_TX_ALT_FREQS:
 		*type = V4L2_CTRL_TYPE_U32;
 		break;
+	case V4L2_CID_MPEG_VIDEO_MPEG2_SLICE_HEADER:
+		*type = V4L2_CTRL_TYPE_MPEG2_SLICE_HEADER;
+		break;
 	default:
 		*type = V4L2_CTRL_TYPE_INTEGER;
 		break;
@@ -1529,6 +1533,7 @@ static void std_log(const struct v4l2_ctrl *ctrl)
 static int std_validate(const struct v4l2_ctrl *ctrl, u32 idx,
 			union v4l2_ctrl_ptr ptr)
 {
+	struct v4l2_ctrl_mpeg2_slice_header *p_mpeg2_slice_header;
 	size_t len;
 	u64 offset;
 	s64 val;
@@ -1589,6 +1594,42 @@ static int std_validate(const struct v4l2_ctrl *ctrl, u32 idx,
 			return -ERANGE;
 		if ((len - (u32)ctrl->minimum) % (u32)ctrl->step)
 			return -ERANGE;
+		return 0;
+
+	case V4L2_CTRL_TYPE_MPEG2_SLICE_HEADER:
+		p_mpeg2_slice_header = ptr.p;
+
+		switch (p_mpeg2_slice_header->intra_dc_precision) {
+		case 0: /* 8 bits */
+		case 1: /* 9 bits */
+		case 11: /* 11 bits */
+			break;
+		default:
+			return -EINVAL;
+		}
+
+		switch (p_mpeg2_slice_header->picture_structure) {
+		case 1: /* interlaced top field */
+		case 2: /* interlaced bottom field */
+		case 3: /* progressive */
+			break;
+		default:
+			return -EINVAL;
+		}
+
+		switch (p_mpeg2_slice_header->picture_coding_type) {
+		case V4L2_SLICE_PCT_I:
+		case V4L2_SLICE_PCT_P:
+		case V4L2_SLICE_PCT_B:
+			break;
+		default:
+			return -EINVAL;
+		}
+
+		if (p_mpeg2_slice_header->backward_ref_index > VIDEO_MAX_FRAME ||
+		    p_mpeg2_slice_header->forward_ref_index > VIDEO_MAX_FRAME)
+			return -EINVAL;
+
 		return 0;
 
 	default:
@@ -2164,6 +2205,9 @@ static struct v4l2_ctrl *v4l2_ctrl_new(struct v4l2_ctrl_handler *hdl,
 		break;
 	case V4L2_CTRL_TYPE_U32:
 		elem_size = sizeof(u32);
+		break;
+	case V4L2_CTRL_TYPE_MPEG2_SLICE_HEADER:
+		elem_size = sizeof(struct v4l2_ctrl_mpeg2_slice_header);
 		break;
 	default:
 		if (type < V4L2_CTRL_COMPOUND_TYPES)

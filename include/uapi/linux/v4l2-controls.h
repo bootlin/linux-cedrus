@@ -557,6 +557,8 @@ enum v4l2_mpeg_video_mpeg4_profile {
 };
 #define V4L2_CID_MPEG_VIDEO_MPEG4_QPEL		(V4L2_CID_MPEG_BASE+407)
 
+#define V4L2_CID_MPEG_VIDEO_MPEG2_SLICE_HEADER  (V4L2_CID_MPEG_BASE+450)
+
 /*  Control IDs for VP8 streams
  *  Although VP8 is not part of MPEG we add these controls to the MPEG class
  *  as that class is already handling other video compression standards
@@ -1075,5 +1077,33 @@ enum v4l2_detect_md_mode {
 #define V4L2_CID_DETECT_MD_GLOBAL_THRESHOLD	(V4L2_CID_DETECT_CLASS_BASE + 2)
 #define V4L2_CID_DETECT_MD_THRESHOLD_GRID	(V4L2_CID_DETECT_CLASS_BASE + 3)
 #define V4L2_CID_DETECT_MD_REGION_GRID		(V4L2_CID_DETECT_CLASS_BASE + 4)
+
+#define V4L2_SLICE_PCT_I			1
+#define V4L2_SLICE_PCT_P			2
+#define V4L2_SLICE_PCT_B			3
+#define V4L2_SLICE_PCT_D			4
+
+struct v4l2_ctrl_mpeg2_slice_header {
+	__u32	slice_len;
+	__u32	slice_pos;
+
+	__u16	width;
+	__u16	height;
+
+	__u8	picture_coding_type;
+	__u8	f_code[2][2];
+
+	__u8	intra_dc_precision;
+	__u8	picture_structure;
+	__u8	top_field_first;
+	__u8	frame_pred_frame_dct;
+	__u8	concealment_motion_vectors;
+	__u8	q_scale_type;
+	__u8	intra_vlc_format;
+	__u8	alternate_scan;
+
+	__u8	backward_ref_index;
+	__u8	forward_ref_index;
+};
 
 #endif

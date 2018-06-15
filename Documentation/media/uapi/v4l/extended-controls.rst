@@ -1497,6 +1497,79 @@ enum v4l2_mpeg_video_h264_hierarchical_coding_type -
 
 
 
+.. _v4l2-mpeg-mpeg2:
+
+``V4L2_CID_MPEG_VIDEO_MPEG2_SLICE_HEADER (struct)``
+    Specifies the slice parameters (also known as slice header) for an
+    associated MPEG-2 slice data. This includes all the necessary
+    parameters for configuring a hardware decoder pipeline for MPEG-2.
+
+.. tabularcolumns:: |p{2.0cm}|p{4.0cm}|p{11.0cm}|
+
+.. c:type:: v4l2_ctrl_mpeg2_slice_header
+
+.. cssclass:: longtable
+
+.. flat-table:: struct v4l2_ctrl_mpeg2_slice_header
+    :header-rows:  0
+    :stub-columns: 0
+    :widths:       1 1 2
+
+    * - __u32
+      - ``slice_len``
+      - Length (in bits) of the current slice data.
+    * - __u32
+      - ``slice_pos``
+      - Position (in bits) of the current slice data, relative to the
+        frame start.
+    * - __u16
+      - ``width``
+      - Width of the corresponding output frame for the current slice.
+    * - __u16
+      - ``height``
+      - Height of the corresponding output frame for the current slice.
+    * - __u8
+      - ``picture_coding_type``
+      - Picture coding type for the frame covered by the current slice
+        (V4L2_SLICE_PCT_I, V4L2_SLICE_PCT_P or V4L2_SLICE_PCT_B).
+    * - __u8
+      - ``f_code[2][2]``
+      - Motion vector codes.
+    * - __u8
+      - ``intra_dc_precision``
+      - Precision of Discrete Cosine transform (0: 8 bits precision,
+        1: 9 bits precision, 2: 10 bits precision, 11: 11 bits precision).
+    * - __u8
+      - ``picture_structure``
+      - Picture structure (1: interlaced top field,
+        2: interlaced bottom field, 3: progressive frame).
+    * - __u8
+      - ``top_field_first``
+      - If set to 1 and interlaced stream, top field is output first.
+    * - __u8
+      - ``frame_pred_frame_dct``
+      - If set to 1, only frame-DCT and frame prediction are used.
+    * - __u8
+      - ``concealment_motion_vectors``
+      -  If set to 1, motion vectors are coded for intra macroblocks.
+    * - __u8
+      - ``q_scale_type``
+      - This flag affects the inverse quantisation process.
+    * - __u8
+      - ``intra_vlc_format``
+      - This flag affects the decoding of transform coefficient data.
+    * - __u8
+      - ``alternate_scan``
+      - This flag affects the decoding of transform coefficient data.
+    * - __u8
+      - ``backward_ref_index``
+      - Index for the V4L2 buffer to use as backward reference, used with
+        B-coded and P-coded frames.
+    * - __u8
+      - ``forward_ref_index``
+      - Index for the V4L2 buffer to use as forward reference, used with
+        P-coded frames.
+    * - :cspan:`2`
 
 MFC 5.1 MPEG Controls
 ---------------------
