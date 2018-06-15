@@ -11,6 +11,9 @@ Controller Node
 Required properties:
 - compatible : should be:
     - "allwinner,sun4i-a10-sram-controller"
+    - "allwinner,sun5i-a13-sram-controller"
+    - "allwinner,sun7i-a20-sram-controller"
+    - "allwinner,sun8i-a33-sram-controller"
     - "allwinner,sun50i-a64-sram-controller"
 - reg : sram controller register offset + length
 
