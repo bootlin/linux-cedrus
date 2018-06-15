@@ -32,6 +32,9 @@ The valid sections compatible for A10 are:
     - allwinner,sun4i-a10-sram-c1
     - allwinner,sun4i-a10-sram-d
 
+The valid sections compatible for A13 are:
+    - allwinner,sun5i-a13-sram-c1
+
 The valid sections compatible for A64 are:
     - allwinner,sun50i-a64-sram-c
 
