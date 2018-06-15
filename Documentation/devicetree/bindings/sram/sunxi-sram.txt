@@ -38,6 +38,9 @@ The valid sections compatible for A13 are:
 The valid sections compatible for A20 are:
     - allwinner,sun7i-a20-sram-c1
 
+The valid sections compatible for A33 are:
+    - allwinner,sun8i-a33-sram-c1
+
 The valid sections compatible for A64 are:
     - allwinner,sun50i-a64-sram-c
 
