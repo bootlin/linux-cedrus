@@ -111,12 +111,14 @@ void cedrus_device_run(void *priv)
 
 	case V4L2_PIX_FMT_H264_SLICE:
 		CHECK_CONTROL(ctx, CEDRUS_CTRL_DEC_H264_DECODE_PARAM);
+		CHECK_CONTROL(ctx, CEDRUS_CTRL_DEC_H264_SCALING_MATRIX);
 		CHECK_CONTROL(ctx, CEDRUS_CTRL_DEC_H264_SLICE_PARAM);
 		CHECK_CONTROL(ctx, CEDRUS_CTRL_DEC_H264_SPS);
 		CHECK_CONTROL(ctx, CEDRUS_CTRL_DEC_H264_PPS);
 
 		run.h264.decode_param = get_ctrl_ptr(ctx, CEDRUS_CTRL_DEC_H264_DECODE_PARAM);
 		run.h264.pps = get_ctrl_ptr(ctx, CEDRUS_CTRL_DEC_H264_PPS);
+		run.h264.scaling_matrix = get_ctrl_ptr(ctx, CEDRUS_CTRL_DEC_H264_SCALING_MATRIX);
 		run.h264.slice_param = get_ctrl_ptr(ctx, CEDRUS_CTRL_DEC_H264_SLICE_PARAM);
 		run.h264.sps = get_ctrl_ptr(ctx, CEDRUS_CTRL_DEC_H264_SPS);
 		break;

@@ -35,6 +35,7 @@ static int cedrus_s_ctrl(struct v4l2_ctrl *ctrl)
 
 	switch (ctrl->id) {
 	case V4L2_CID_MPEG_VIDEO_H264_DECODE_PARAM:
+	case V4L2_CID_MPEG_VIDEO_H264_SCALING_MATRIX:
 	case V4L2_CID_MPEG_VIDEO_H264_SLICE_PARAM:
 	case V4L2_CID_MPEG_VIDEO_H264_SPS:
 	case V4L2_CID_MPEG_VIDEO_H264_PPS:
@@ -57,6 +58,10 @@ static const struct cedrus_control controls[] = {
 	[CEDRUS_CTRL_DEC_H264_DECODE_PARAM] = {
 		.id		= V4L2_CID_MPEG_VIDEO_H264_DECODE_PARAM,
 		.elem_size	= sizeof(struct v4l2_ctrl_h264_decode_param),
+	},
+	[CEDRUS_CTRL_DEC_H264_SCALING_MATRIX] = {
+		.id		= V4L2_CID_MPEG_VIDEO_H264_SCALING_MATRIX,
+		.elem_size	= sizeof(struct v4l2_ctrl_h264_scaling_matrix),
 	},
 	[CEDRUS_CTRL_DEC_H264_SLICE_PARAM] = {
 		.id		= V4L2_CID_MPEG_VIDEO_H264_SLICE_PARAM,

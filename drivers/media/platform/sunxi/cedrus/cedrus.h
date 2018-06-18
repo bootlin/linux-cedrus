@@ -26,6 +26,7 @@
 enum cedrus_control_id {
 	CEDRUS_CTRL_DEC_H264_DECODE_PARAM,
 	CEDRUS_CTRL_DEC_H264_PPS,
+	CEDRUS_CTRL_DEC_H264_SCALING_MATRIX,
 	CEDRUS_CTRL_DEC_H264_SLICE_PARAM,
 	CEDRUS_CTRL_DEC_H264_SPS,
 	CEDRUS_CTRL_DEC_MPEG2_SLICE_HEADER,
@@ -47,6 +48,7 @@ struct cedrus_fmt {
 struct cedrus_h264_run {
 	const struct v4l2_ctrl_h264_decode_param	*decode_param;
 	const struct v4l2_ctrl_h264_pps			*pps;
+	const struct v4l2_ctrl_h264_scaling_matrix	*scaling_matrix;
 	const struct v4l2_ctrl_h264_slice_param		*slice_param;
 	const struct v4l2_ctrl_h264_sps			*sps;
 };
