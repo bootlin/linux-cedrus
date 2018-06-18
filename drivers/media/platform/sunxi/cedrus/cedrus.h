@@ -68,6 +68,7 @@ struct cedrus_run {
 };
 
 enum cedrus_codec {
+	CEDRUS_CODEC_H264,
 	CEDRUS_CODEC_MPEG2,
 
 	CEDRUS_CODEC_LAST,

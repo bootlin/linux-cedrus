@@ -8,7 +8,7 @@
 
 #include <media/videobuf2-dma-contig.h>
 
-#include "cedrus_common.h"
+#include "cedrus.h"
 #include "cedrus_hw.h"
 #include "cedrus_regs.h"
 
