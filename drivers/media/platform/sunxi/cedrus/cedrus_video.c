@@ -425,7 +425,7 @@ static int cedrus_start_streaming(struct vb2_queue *q, unsigned int count)
 	case V4L2_PIX_FMT_H264_SLICE:
 		ctx->current_codec = CEDRUS_CODEC_H264;
 		break;
-	case V4L2_PIX_FMT_MPEG2_FRAME:
+	case V4L2_PIX_FMT_MPEG2_SLICE:
 		ctx->current_codec = CEDRUS_CODEC_MPEG2;
 		break;
 	default:
