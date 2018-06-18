@@ -29,68 +29,13 @@
 #include "sun4i_drv.h"
 #include "sun4i_frontend.h"
 #include "sun4i_layer.h"
+#include "sun4i_format.h"
 #include "sunxi_engine.h"
 
 struct sun4i_backend_quirks {
 	/* backend <-> TCON muxing selection done in backend */
 	bool needs_output_muxing;
 };
-
-static const u32 sunxi_rgb2yuv_coef[12] = {
-	0x00000107, 0x00000204, 0x00000064, 0x00000108,
-	0x00003f69, 0x00003ed6, 0x000001c1, 0x00000808,
-	0x000001c1, 0x00003e88, 0x00003fb8, 0x00000808
-};
-
-/*
- * These coefficients are taken from the A33 BSP from Allwinner.
- *
- * The formula is for each component, each coefficient being multiplied by
- * 1024 and each constant being multiplied by 16:
- * G = 1.164 * Y - 0.391 * U - 0.813 * V + 135
- * R = 1.164 * Y + 1.596 * V - 222
- * B = 1.164 * Y + 2.018 * U + 276
- *
- * This seems to be a conversion from Y[16:235] UV[16:240] to RGB[0:255],
- * following the BT601 spec.
- */
-static const u32 sunxi_bt601_yuv2rgb_coef[12] = {
-	0x000004a7, 0x00001e6f, 0x00001cbf, 0x00000877,
-	0x000004a7, 0x00000000, 0x00000662, 0x00003211,
-	0x000004a7, 0x00000812, 0x00000000, 0x00002eb1,
-};
-
-static inline bool sun4i_backend_format_is_planar_yuv(uint32_t format)
-{
-	switch (format) {
-	case DRM_FORMAT_YUV411:
-	case DRM_FORMAT_YUV422:
-	case DRM_FORMAT_YUV444:
-		return true;
-	default:
-		return false;
-	}
-}
-
-static inline bool sun4i_backend_format_is_packed_yuv422(uint32_t format)
-{
-	switch (format) {
-	case DRM_FORMAT_YUYV:
-	case DRM_FORMAT_YVYU:
-	case DRM_FORMAT_UYVY:
-	case DRM_FORMAT_VYUY:
-		return true;
-
-	default:
-		return false;
-	}
-}
-
-static inline bool sun4i_backend_format_is_yuv(uint32_t format)
-{
-	return sun4i_backend_format_is_planar_yuv(format) ||
-		sun4i_backend_format_is_packed_yuv422(format);
-}
 
 static void sun4i_backend_apply_color_correction(struct sunxi_engine *engine)
 {
@@ -184,6 +129,42 @@ static int sun4i_backend_drm_format_to_layer(u32 format, u32 *mode)
 	return 0;
 }
 
+static const uint32_t sun4i_backend_formats[] = {
+	/* RGB */
+	DRM_FORMAT_ARGB4444,
+	DRM_FORMAT_RGBA4444,
+	DRM_FORMAT_ARGB1555,
+	DRM_FORMAT_RGBA5551,
+	DRM_FORMAT_RGB565,
+	DRM_FORMAT_RGB888,
+	DRM_FORMAT_XRGB8888,
+	DRM_FORMAT_BGRX8888,
+	DRM_FORMAT_ARGB8888,
+	/* YUV422 */
+	DRM_FORMAT_YUYV,
+	DRM_FORMAT_YVYU,
+	DRM_FORMAT_UYVY,
+	DRM_FORMAT_VYUY,
+};
+
+bool sun4i_backend_format_is_supported(uint32_t fmt, uint64_t modifier)
+{
+	bool found = false;
+	unsigned int i;
+
+	if (modifier == DRM_FORMAT_MOD_ALLWINNER_MB32_TILED)
+		return false;
+
+	for (i = 0; i < ARRAY_SIZE(sun4i_backend_formats); i++) {
+		if (sun4i_backend_formats[i] == fmt) {
+			found = true;
+			break;
+		}
+	}
+
+	return found;
+}
+
 int sun4i_backend_update_layer_coord(struct sun4i_backend *backend,
 				     int layer, struct drm_plane *plane)
 {
@@ -239,7 +220,7 @@ static int sun4i_backend_update_yuv_format(struct sun4i_backend *backend,
 			   SUN4I_BACKEND_ATTCTL_REG0_LAY_YUVEN);
 
 	/* TODO: Add support for the multi-planar YUV formats */
-	if (sun4i_backend_format_is_packed_yuv422(format))
+	if (sun4i_format_is_packed_yuv422(format))
 		val |= SUN4I_BACKEND_IYUVCTL_FBFMT_PACKED_YUV422;
 	else
 		DRM_DEBUG_DRIVER("Unsupported YUV format (0x%x)\n", format);
@@ -295,7 +276,7 @@ int sun4i_backend_update_layer_formats(struct sun4i_backend *backend,
 	DRM_DEBUG_DRIVER("Switching display backend interlaced mode %s\n",
 			 interlaced ? "on" : "off");
 
-	if (sun4i_backend_format_is_yuv(fb->format->format))
+	if (sun4i_format_is_yuv(fb->format->format))
 		return sun4i_backend_update_yuv_format(backend, layer, plane);
 
 	ret = sun4i_backend_drm_format_to_layer(fb->format->format, &val);
@@ -312,8 +293,10 @@ int sun4i_backend_update_layer_formats(struct sun4i_backend *backend,
 }
 
 int sun4i_backend_update_layer_frontend(struct sun4i_backend *backend,
-					int layer, uint32_t fmt)
+					int layer, struct drm_plane *plane,
+					uint32_t fmt)
 {
+	bool interlaced = false;
 	u32 val;
 	int ret;
 
@@ -323,10 +306,23 @@ int sun4i_backend_update_layer_frontend(struct sun4i_backend *backend,
 		return ret;
 	}
 
+	/* Clear the YUV mode */
+	regmap_update_bits(backend->engine.regs,
+			   SUN4I_BACKEND_ATTCTL_REG0(layer),
+			   SUN4I_BACKEND_ATTCTL_REG0_LAY_YUVEN, 0);
+
 	regmap_update_bits(backend->engine.regs,
 			   SUN4I_BACKEND_ATTCTL_REG0(layer),
 			   SUN4I_BACKEND_ATTCTL_REG0_LAY_VDOEN,
 			   SUN4I_BACKEND_ATTCTL_REG0_LAY_VDOEN);
+
+	if (plane->state->crtc)
+		interlaced = plane->state->crtc->state->adjusted_mode.flags
+			& DRM_MODE_FLAG_INTERLACE;
+
+	regmap_update_bits(backend->engine.regs, SUN4I_BACKEND_MODCTL_REG,
+			   SUN4I_BACKEND_MODCTL_ITLMOD_EN,
+			   interlaced ? SUN4I_BACKEND_MODCTL_ITLMOD_EN : 0);
 
 	regmap_update_bits(backend->engine.regs,
 			   SUN4I_BACKEND_ATTCTL_REG1(layer),
@@ -375,7 +371,7 @@ int sun4i_backend_update_layer_buffer(struct sun4i_backend *backend,
 	 */
 	paddr -= PHYS_OFFSET;
 
-	if (sun4i_backend_format_is_yuv(fb->format->format))
+	if (sun4i_format_is_yuv(fb->format->format))
 		return sun4i_backend_update_yuv_buffer(backend, fb, paddr);
 
 	/* Write the 32 lower bits of the address (in bits) */
@@ -414,6 +410,14 @@ int sun4i_backend_update_layer_zpos(struct sun4i_backend *backend, int layer,
 	return 0;
 }
 
+void sun4i_backend_disable_layer_frontend(struct sun4i_backend *backend,
+					  int layer)
+{
+	regmap_update_bits(backend->engine.regs,
+			   SUN4I_BACKEND_ATTCTL_REG0(layer),
+			   SUN4I_BACKEND_ATTCTL_REG0_LAY_VDOEN, 0);
+}
+
 static bool sun4i_backend_plane_uses_scaler(struct drm_plane_state *state)
 {
 	u16 src_h = state->src_h >> 16;
@@ -432,11 +436,29 @@ static bool sun4i_backend_plane_uses_frontend(struct drm_plane_state *state)
 {
 	struct sun4i_layer *layer = plane_to_sun4i_layer(state->plane);
 	struct sun4i_backend *backend = layer->backend;
+	struct drm_framebuffer *fb = state->fb;
 
 	if (IS_ERR(backend->frontend))
 		return false;
 
-	return sun4i_backend_plane_uses_scaler(state);
+	/*
+	 * Let's pretend that every format is either supported by the backend or
+	 * the frontend. This is not true in practice, as some tiling modes are
+	 * not supported by either. There is still room to check this later in
+	 * the atomic check process.
+	 */
+	if (!sun4i_backend_format_is_supported(fb->format->format,
+					       fb->modifier))
+		return true;
+
+	/*
+	 * TODO: Don't use the frontend for x2/x4 scaling and allow RGB formats
+	 * with an alpha component then.
+	 */
+	if (sun4i_backend_plane_uses_scaler(state))
+		return true;
+
+	return false;
 }
 
 static void sun4i_backend_atomic_begin(struct sunxi_engine *engine,
@@ -478,25 +500,31 @@ static int sun4i_backend_atomic_check(struct sunxi_engine *engine,
 		struct drm_format_name_buf format_name;
 
 		if (sun4i_backend_plane_uses_frontend(plane_state)) {
+			if (!sun4i_frontend_plane_check(plane_state)) {
+				DRM_DEBUG_DRIVER("Frontend plane check failed\n");
+				return -EINVAL;
+			}
+
 			DRM_DEBUG_DRIVER("Using the frontend for plane %d\n",
 					 plane->index);
 
 			layer_state->uses_frontend = true;
 			num_frontend_planes++;
 		} else {
+			if (sun4i_format_is_yuv(fb->format->format)) {
+				DRM_DEBUG_DRIVER("Plane FB format is YUV\n");
+				num_yuv_planes++;
+			}
+
 			layer_state->uses_frontend = false;
 		}
 
 		DRM_DEBUG_DRIVER("Plane FB format is %s\n",
 				 drm_get_format_name(fb->format->format,
 						     &format_name));
+
 		if (fb->format->has_alpha)
 			num_alpha_planes++;
-
-		if (sun4i_backend_format_is_yuv(fb->format->format)) {
-			DRM_DEBUG_DRIVER("Plane FB format is YUV\n");
-			num_yuv_planes++;
-		}
 
 		DRM_DEBUG_DRIVER("Plane zpos is %d\n",
 				 plane_state->normalized_zpos);
