@@ -31,42 +31,6 @@ static inline void *get_ctrl_ptr(struct cedrus_ctx *ctx,
 	return ctrl->p_cur.p;
 }
 
-void cedrus_device_work(struct work_struct *work)
-{
-	struct cedrus_ctx *ctx = container_of(work,
-					      struct cedrus_ctx, run_work);
-	struct cedrus_dev *dev = ctx->dev;
-	struct cedrus_buffer *src_buf, *dst_buf;
-	unsigned long flags;
-
-	spin_lock_irqsave(&ctx->dev->irq_lock, flags);
-
-	src_buf = list_first_entry_or_null(&ctx->src_list, struct cedrus_buffer,
-					   list);
-	if (!src_buf) {
-		v4l2_err(&dev->v4l2_dev, "Empty source buffer list\n");
-		spin_unlock_irqrestore(&ctx->dev->irq_lock, flags);
-		return;
-	}
-
-	dst_buf = list_first_entry_or_null(&ctx->dst_list, struct cedrus_buffer,
-					   list);
-	if (!dst_buf) {
-		v4l2_err(&dev->v4l2_dev, "Empty destination buffer list\n");
-		spin_unlock_irqrestore(&ctx->dev->irq_lock, flags);
-		return;
-	}
-
-	list_del(&src_buf->list);
-	list_del(&dst_buf->list);
-	
-	spin_unlock_irqrestore(&ctx->dev->irq_lock, flags);
-
-	v4l2_m2m_buf_done(&src_buf->vb, src_buf->state);
-	v4l2_m2m_buf_done(&dst_buf->vb, dst_buf->state);
-	v4l2_m2m_job_finish(ctx->dev->m2m_dev, ctx->fh.m2m_ctx);
-}
-
 void cedrus_device_run(void *priv)
 {
 	struct cedrus_ctx *ctx = priv;

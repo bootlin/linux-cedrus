@@ -63,13 +63,30 @@ void cedrus_engine_disable(struct cedrus_dev *dev)
 	cedrus_write(dev, VE_CTRL, VE_CTRL_DEC_MODE_DISABLED);
 }
 
-static irqreturn_t cedrus_ve_irq(int irq, void *data)
+static irqreturn_t cedrus_bh(int irq, void *data)
 {
 	struct cedrus_dev *dev = data;
 	struct cedrus_ctx *ctx;
-	struct cedrus_buffer *src_buffer, *dst_buffer;
+
+	ctx = v4l2_m2m_get_curr_priv(dev->m2m_dev);
+	if (!ctx) {
+		v4l2_err(&dev->v4l2_dev,
+			 "Instance released before the end of transaction\n");
+		return IRQ_HANDLED;
+	}
+
+	v4l2_m2m_job_finish(ctx->dev->m2m_dev, ctx->fh.m2m_ctx);
+
+	return IRQ_HANDLED;
+}
+
+static irqreturn_t cedrus_irq(int irq, void *data)
+{
+	struct cedrus_dev *dev = data;
+	struct cedrus_ctx *ctx;
 	struct vb2_v4l2_buffer *src_vb, *dst_vb;
 	enum cedrus_irq_status status;
+	enum vb2_buffer_state state;
 	unsigned long flags;
 
 	spin_lock_irqsave(&dev->irq_lock, flags);
@@ -103,22 +120,17 @@ static irqreturn_t cedrus_ve_irq(int irq, void *data)
 		return IRQ_HANDLED;
 	}
 
-	src_buffer = vb2_v4l2_to_cedrus_buffer(src_vb);
-	dst_buffer = vb2_v4l2_to_cedrus_buffer(dst_vb);
-
 	if (ctx->job_abort || status == CEDRUS_IRQ_ERROR)
-		src_buffer->state = dst_buffer->state = VB2_BUF_STATE_ERROR;
+		state = VB2_BUF_STATE_ERROR;
 	else
-		src_buffer->state = dst_buffer->state = VB2_BUF_STATE_DONE;
+		state = VB2_BUF_STATE_DONE;
 
-	list_add_tail(&src_buffer->list, &ctx->src_list);
-	list_add_tail(&dst_buffer->list, &ctx->dst_list);
+	v4l2_m2m_buf_done(src_vb, state);
+	v4l2_m2m_buf_done(dst_vb, state);
 
 	spin_unlock_irqrestore(&dev->irq_lock, flags);
 
-	schedule_work(&ctx->run_work);
-
-	return IRQ_HANDLED;
+	return IRQ_WAKE_THREAD;
 }
 
 int cedrus_hw_probe(struct cedrus_dev *dev)
@@ -132,8 +144,9 @@ int cedrus_hw_probe(struct cedrus_dev *dev)
 		v4l2_err(&dev->v4l2_dev, "Failed to get IRQ\n");
 		return -ENXIO;
 	}
-	ret = devm_request_irq(dev->dev, irq_dec, cedrus_ve_irq, 0,
-			       dev_name(dev->dev), dev);
+	ret = devm_request_threaded_irq(dev->dev, irq_dec,
+					cedrus_irq, cedrus_bh,
+					0, dev_name(dev->dev), dev);
 	if (ret) {
 		v4l2_err(&dev->v4l2_dev, "Failed to request IRQ\n");
 		return -ENXIO;

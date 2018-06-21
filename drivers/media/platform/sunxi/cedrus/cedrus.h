@@ -92,11 +92,6 @@ struct cedrus_ctx {
 
 	int				job_abort;
 
-	struct work_struct		try_schedule_work;
-	struct work_struct		run_work;
-	struct list_head		src_list;
-	struct list_head		dst_list;
-
 	union {
 		struct {
 			void		*mv_col_buf;
@@ -118,8 +113,6 @@ enum cedrus_h264_pic_type {
 
 struct cedrus_buffer {
 	struct v4l2_m2m_buffer		m2m_buf;
-	enum vb2_buffer_state		state;
-	struct list_head		list;
 
 	union {
 		struct {

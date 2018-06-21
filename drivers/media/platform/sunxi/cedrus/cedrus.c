@@ -132,11 +132,6 @@ static int cedrus_open(struct file *file)
 		return -ENOMEM;
 	}
 
-	INIT_WORK(&ctx->run_work, cedrus_device_work);
-
-	INIT_LIST_HEAD(&ctx->src_list);
-	INIT_LIST_HEAD(&ctx->dst_list);
-
 	v4l2_fh_init(&ctx->fh, video_devdata(file));
 	file->private_data = &ctx->fh;
 	ctx->dev = dev;
