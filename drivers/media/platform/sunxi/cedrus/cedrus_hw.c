@@ -106,8 +106,7 @@ static irqreturn_t cedrus_ve_irq(int irq, void *data)
 	src_buffer = vb2_v4l2_to_cedrus_buffer(src_vb);
 	dst_buffer = vb2_v4l2_to_cedrus_buffer(dst_vb);
 
-	/* First bit of MPEG_STATUS indicates success. */
-	if (ctx->job_abort || !(status & 0x01))
+	if (ctx->job_abort || status == CEDRUS_IRQ_ERROR)
 		src_buffer->state = dst_buffer->state = VB2_BUF_STATE_ERROR;
 	else
 		src_buffer->state = dst_buffer->state = VB2_BUF_STATE_DONE;
