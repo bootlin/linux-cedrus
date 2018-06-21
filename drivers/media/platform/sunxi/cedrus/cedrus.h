@@ -132,7 +132,7 @@ struct cedrus_buffer {
 static inline
 struct cedrus_buffer *vb2_v4l2_to_cedrus_buffer(const struct vb2_v4l2_buffer *p)
 {
-	return container_of(p, struct cedrus_buffer, vb);
+	return container_of(p, struct cedrus_buffer, m2m_buf.vb);
 }
 
 static inline
