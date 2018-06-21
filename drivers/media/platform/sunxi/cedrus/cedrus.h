@@ -15,11 +15,12 @@
 #ifndef _CEDRUS_H_
 #define _CEDRUS_H_
 
-#include <linux/platform_device.h>
-
-#include <media/videobuf2-v4l2.h>
-#include <media/v4l2-device.h>
 #include <media/v4l2-ctrls.h>
+#include <media/v4l2-device.h>
+#include <media/v4l2-mem2mem.h>
+#include <media/videobuf2-v4l2.h>
+
+#include <linux/platform_device.h>
 
 #define CEDRUS_NAME	"cedrus"
 
@@ -116,7 +117,7 @@ enum cedrus_h264_pic_type {
 };
 
 struct cedrus_buffer {
-	struct vb2_v4l2_buffer		vb;
+	struct v4l2_m2m_buffer		m2m_buf;
 	enum vb2_buffer_state		state;
 	struct list_head		list;
 
