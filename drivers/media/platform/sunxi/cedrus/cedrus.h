@@ -180,6 +180,7 @@ struct cedrus_dev {
 
 static inline void cedrus_write(struct cedrus_dev *dev, u32 reg, u32 val)
 {
+	printk("0x%px <= 0x%08x\n", dev->base + reg, val);
 	writel(val, dev->base + reg);
 }
 
