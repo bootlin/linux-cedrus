@@ -1371,11 +1371,18 @@ EXPORT_SYMBOL_GPL(vb2_request_object_is_buffer);
 bool vb2_request_has_buffers(struct media_request *req)
 {
 	struct media_request_object *obj;
+	unsigned long flags;
+	bool has_buffers = false;
 
-	list_for_each_entry(obj, &req->objects, list)
-		if (vb2_request_object_is_buffer(obj))
-			return true;
-	return false;
+	spin_lock_irqsave(&req->lock, flags);
+	list_for_each_entry(obj, &req->objects, list) {
+		if (vb2_request_object_is_buffer(obj)) {
+			has_buffers = true;
+			break;
+		}
+	}
+	spin_unlock_irqrestore(&req->lock, flags);
+	return has_buffers;
 }
 EXPORT_SYMBOL_GPL(vb2_request_has_buffers);
 

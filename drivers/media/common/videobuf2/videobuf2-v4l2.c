@@ -1134,9 +1134,9 @@ EXPORT_SYMBOL_GPL(vb2_request_validate);
 
 void vb2_request_queue(struct media_request *req)
 {
-	struct media_request_object *obj;
+	struct media_request_object *obj, *obj_safe;
 
-	list_for_each_entry(obj, &req->objects, list) {
+	list_for_each_entry_safe(obj, obj_safe, &req->objects, list) {
 		if (obj->ops->queue)
 			obj->ops->queue(obj);
 	}

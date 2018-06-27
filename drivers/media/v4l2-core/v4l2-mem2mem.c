@@ -706,27 +706,36 @@ EXPORT_SYMBOL_GPL(v4l2_m2m_buf_queue);
 
 void vb2_m2m_request_queue(struct media_request *req)
 {
-	struct media_request_object *obj;
+	struct media_request_object *obj, *obj_safe;
+	struct v4l2_m2m_ctx *m2m_ctx = NULL;
 
-	list_for_each_entry(obj, &req->objects, list) {
-		struct v4l2_m2m_ctx *m2m_ctx;
+	list_for_each_entry_safe(obj, obj_safe, &req->objects, list) {
+		struct v4l2_m2m_ctx *m2m_ctx_obj;
 		struct vb2_buffer *vb;
 
 		if (!obj->ops->queue)
 			continue;
 
+		if (vb2_request_object_is_buffer(obj)) {
+			/* Sanity checks */
+			vb = container_of(obj, struct vb2_buffer, req_obj);
+			WARN_ON(!V4L2_TYPE_IS_OUTPUT(vb->vb2_queue->type));
+			m2m_ctx_obj = container_of(vb->vb2_queue,
+						   struct v4l2_m2m_ctx,
+						   out_q_ctx.q);
+			WARN_ON(m2m_ctx && m2m_ctx_obj != m2m_ctx);
+			m2m_ctx = m2m_ctx_obj;
+		}
+		/*
+		 * The buffer we queue here can in theory be immediately
+		 * unbound, hence the use of list_for_each_entry_safe()
+		 * above and why we call the queue op last.
+		 */
 		obj->ops->queue(obj);
-		if (!vb2_request_object_is_buffer(obj))
-			continue;
-
-		vb = container_of(obj, struct vb2_buffer, req_obj);
-		if (WARN_ON(!V4L2_TYPE_IS_OUTPUT(vb->vb2_queue->type)))
-			continue;
-		m2m_ctx = container_of(vb->vb2_queue,
-				       struct v4l2_m2m_ctx,
-				       out_q_ctx.q);
-		v4l2_m2m_try_schedule(m2m_ctx);
 	}
+	WARN_ON(!m2m_ctx);
+	if (m2m_ctx)
+		v4l2_m2m_try_schedule(m2m_ctx);
 }
 EXPORT_SYMBOL_GPL(vb2_m2m_request_queue);
 
