@@ -65,13 +65,18 @@ void cedrus_device_run(void *priv)
 			V4L2_CID_MPEG_VIDEO_H264_DECODE_PARAM);
 		run.h264.pps = cedrus_find_control_data(ctx,
 			V4L2_CID_MPEG_VIDEO_H264_PPS);
+		run.h264.scaling_matrix = cedrus_find_control_data(ctx,
+			V4L2_CID_MPEG_VIDEO_H264_SCALING_MATRIX);
 		run.h264.slice_param = cedrus_find_control_data(ctx,
 			V4L2_CID_MPEG_VIDEO_H264_SLICE_PARAM);
+		run.h264.scaling_matrix = cedrus_find_control_data(ctx,
+			V4L2_CID_MPEG_VIDEO_H264_SCALING_MATRIX);
 		run.h264.sps = cedrus_find_control_data(ctx,
 			V4L2_CID_MPEG_VIDEO_H264_SPS);
 
 		error = !run.h264.decode_param || !run.h264.pps ||
-			!run.h264.slice_param || !run.h264.sps;
+			!run.h264.scaling_matrix || !run.h264.slice_param ||
+			!run.h264.sps;
 		break;
 
 	default:
