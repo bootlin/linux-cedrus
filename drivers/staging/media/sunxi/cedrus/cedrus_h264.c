@@ -213,6 +213,24 @@ static void cedrus_write_ref_list1(struct cedrus_ctx *ctx,
 			       CEDRUS_SRAM_H264_REF_LIST_1);
 }
 
+static void cedrus_write_scaling_lists(struct cedrus_ctx *ctx,
+				       struct cedrus_run *run)
+{
+	const struct v4l2_ctrl_h264_scaling_matrix *scaling =
+		run->h264.scaling_matrix;
+	struct cedrus_dev *dev = ctx->dev;
+
+	return;
+
+	cedrus_h264_write_sram(dev, CEDRUS_SRAM_H264_SCALING_LIST_8x8,
+			       scaling->scaling_list_8x8,
+			       sizeof(scaling->scaling_list_8x8));
+
+	cedrus_h264_write_sram(dev, CEDRUS_SRAM_H264_SCALING_LIST_4x4,
+			       scaling->scaling_list_4x4,
+			       sizeof(scaling->scaling_list_4x4));
+}
+
 static void cedrus_set_params(struct cedrus_ctx *ctx,
 			      struct cedrus_run *run)
 {
@@ -370,6 +388,7 @@ static void cedrus_h264_setup(struct cedrus_ctx *ctx,
 	cedrus_write(dev, VE_H264_EXTRA_BUFFER2,
 		     (ctx->codec.h264.pic_info_buf_dma - PHYS_OFFSET) + 0x48000);
 
+	cedrus_write_scaling_lists(ctx, run);
 	cedrus_write_frame_list(ctx, run);
 
 	cedrus_set_params(ctx, run);
