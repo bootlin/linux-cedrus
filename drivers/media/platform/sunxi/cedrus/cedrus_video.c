@@ -39,6 +39,12 @@ static struct cedrus_format cedrus_formats[] = {
 		.num_buffers	= 1,
 	},
 	{
+		.pixelformat	= V4L2_PIX_FMT_H264_SLICE,
+		.directions	= CEDRUS_DECODE_SRC,
+		.num_planes	= 1,
+		.num_buffers	= 1,
+	},
+	{
 		.pixelformat	= V4L2_PIX_FMT_MB32_NV12,
 		.directions	= CEDRUS_DECODE_DST,
 		.num_planes	= 2,
@@ -96,6 +102,7 @@ static void cedrus_prepare_plane_format(struct cedrus_format *fmt,
 
 	switch (fmt->pixelformat) {
 	case V4L2_PIX_FMT_MPEG2_SLICE:
+	case V4L2_PIX_FMT_H264_SLICE:
 		/* Zero bytes per line. */
 		bytesperline = 0;
 		break;
@@ -456,6 +463,9 @@ static int cedrus_start_streaming(struct vb2_queue *q, unsigned int count)
 	switch (ctx->src_fmt.pixelformat) {
 	case V4L2_PIX_FMT_MPEG2_SLICE:
 		ctx->current_codec = CEDRUS_CODEC_MPEG2;
+		break;
+	case V4L2_PIX_FMT_H264_SLICE:
+		ctx->current_codec = CEDRUS_CODEC_H264;
 		break;
 	default:
 		return -EINVAL;

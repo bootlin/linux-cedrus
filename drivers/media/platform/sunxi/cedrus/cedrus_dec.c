@@ -28,6 +28,7 @@ void cedrus_device_run(void *priv)
 	struct cedrus_run run = { 0 };
 	struct media_request *src_req;
 	unsigned long flags;
+	bool error = true;
 
 	run.src = v4l2_m2m_next_src_buf(ctx->fh.m2m_ctx);
 	if (!run.src) {
@@ -56,16 +57,31 @@ void cedrus_device_run(void *priv)
 		run.mpeg2.slice_params = cedrus_find_control_data(ctx,
 			V4L2_CID_MPEG_VIDEO_MPEG2_SLICE_PARAMS);
 
-		if (!run.mpeg2.slice_params) {
-			v4l2_err(&dev->v4l2_dev,
-				 "Missing MPEG2 frame params control\n");
-			ctx->job_abort = 1;
-			goto unlock_complete;
-		}
+		error = !run.mpeg2.slice_params;
+		break;
+
+	case V4L2_PIX_FMT_H264_SLICE:
+		run.h264.decode_param = cedrus_find_control_data(ctx,
+			V4L2_CID_MPEG_VIDEO_H264_DECODE_PARAM);
+		run.h264.pps = cedrus_find_control_data(ctx,
+			V4L2_CID_MPEG_VIDEO_H264_PPS);
+		run.h264.slice_param = cedrus_find_control_data(ctx,
+			V4L2_CID_MPEG_VIDEO_H264_SLICE_PARAM);
+		run.h264.sps = cedrus_find_control_data(ctx,
+			V4L2_CID_MPEG_VIDEO_H264_SPS);
+
+		error = !run.h264.decode_param || !run.h264.pps ||
+			!run.h264.slice_param || !run.h264.sps;
 		break;
 
 	default:
 		ctx->job_abort = 1;
+	}
+
+	if (error) {
+		v4l2_err(&dev->v4l2_dev, "Invalid controls for decoding\n");
+		ctx->job_abort = 1;
+		goto unlock_complete;
 	}
 
 	if (!ctx->job_abort)
