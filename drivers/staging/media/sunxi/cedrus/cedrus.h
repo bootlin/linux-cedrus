@@ -56,6 +56,7 @@ struct cedrus_control {
 struct cedrus_h264_run {
 	const struct v4l2_ctrl_h264_decode_param	*decode_param;
 	const struct v4l2_ctrl_h264_pps			*pps;
+	const struct v4l2_ctrl_h264_scaling_matrix	*scaling_matrix;
 	const struct v4l2_ctrl_h264_slice_param		*slice_param;
 	const struct v4l2_ctrl_h264_sps			*sps;
 };
