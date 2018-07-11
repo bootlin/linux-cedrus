@@ -220,9 +220,6 @@ static void cedrus_write_pred_weight_table(struct cedrus_ctx *ctx,
 	struct cedrus_dev *dev = ctx->dev;
 	int i, j, k;
 
-#warning FIXME
-	return;
-
 	cedrus_write(dev, VE_H264_PRED_WEIGHT,
 		     ((pred_weight->chroma_log2_weight_denom & 0xf) << 4) |
 		     ((pred_weight->luma_log2_weight_denom & 0xf) << 0));
@@ -284,22 +281,25 @@ static void cedrus_set_params(struct cedrus_ctx *ctx,
 	u32 len = (slice->size * 8) - offset;
 	u32 reg;
 
-	cedrus_write(dev, 0x250,
-		     ctx->codec.h264.pic_info_buf_dma - PHYS_OFFSET);
-	cedrus_write(dev, 0x254,
-		     (ctx->codec.h264.pic_info_buf_dma - PHYS_OFFSET) + 0x48000);
-
+	cedrus_write(dev, 0x220, 0x02000400);
 	cedrus_write(dev, VE_H264_VLD_LEN, len);
 	cedrus_write(dev, VE_H264_VLD_OFFSET, offset);
 
 	src_buf_addr = vb2_dma_contig_plane_dma_addr(&run->src->vb2_buf, 0);
 	src_buf_addr -= PHYS_OFFSET;
+	cedrus_write(dev, VE_H264_VLD_END, src_buf_addr + VBV_SIZE - 1);
 	cedrus_write(dev, VE_H264_VLD_ADDR,
 		     VE_H264_VLD_ADDR_VAL(src_buf_addr) | VE_H264_VLD_ADDR_FIRST | VE_H264_VLD_ADDR_VALID | VE_H264_VLD_ADDR_LAST);
-	cedrus_write(dev, VE_H264_VLD_END, src_buf_addr + VBV_SIZE - 1);
 
 	cedrus_write(dev, VE_H264_TRIGGER_TYPE,
 		     VE_H264_TRIGGER_TYPE_INIT_SWDEC);
+
+	if (((pps->flags & V4L2_H264_PPS_FLAG_WEIGHTED_PRED) &&
+	     (slice->slice_type == V4L2_H264_SLICE_TYPE_P ||
+	      slice->slice_type == V4L2_H264_SLICE_TYPE_SP)) ||
+	    (pps->weighted_bipred_idc == 1 &&
+	     slice->slice_type == V4L2_H264_SLICE_TYPE_B))
+		cedrus_write_pred_weight_table(ctx, run);
 
 	if ((slice->slice_type == V4L2_H264_SLICE_TYPE_P) ||
 	    (slice->slice_type == V4L2_H264_SLICE_TYPE_SP) ||
@@ -429,7 +429,7 @@ static void cedrus_h264_setup(struct cedrus_ctx *ctx,
 
 	cedrus_write_scaling_lists(ctx, run);
 	cedrus_write_frame_list(ctx, run);
-	cedrus_write_pred_weight_table(ctx, run);
+
 	cedrus_set_params(ctx, run);
 }
 
