@@ -165,8 +165,9 @@ static int cedrus_querycap(struct file *file, void *priv,
 
 static int cedrus_enum_fmt(struct v4l2_fmtdesc *f, u32 direction)
 {
-	struct cedrus_format *fmt;
 	unsigned int i, index;
+
+	printk(KERN_ERR "%s: index %d\n", __func__, f->index);
 
 	/* Index among formats that match the requested direction. */
 	index = 0;
@@ -182,8 +183,7 @@ static int cedrus_enum_fmt(struct v4l2_fmtdesc *f, u32 direction)
 
 	/* Matched format. */
 	if (i < CEDRUS_FORMATS_COUNT) {
-		fmt = &cedrus_formats[i];
-		f->pixelformat = fmt->pixelformat;
+		f->pixelformat = cedrus_formats[i].pixelformat;
 
 		return 0;
 	}
@@ -198,7 +198,7 @@ static int cedrus_enum_fmt_vid_cap(struct file *file, void *priv,
 }
 
 static int cedrus_enum_fmt_vid_out(struct file *file, void *priv,
-				   struct v4l2_fmtdesc *f)
+				  struct v4l2_fmtdesc *f)
 {
 	return cedrus_enum_fmt(f, CEDRUS_DECODE_SRC);
 }
@@ -315,7 +315,7 @@ static int cedrus_s_fmt_vid_out(struct file *file, void *priv,
 const struct v4l2_ioctl_ops cedrus_ioctl_ops = {
 	.vidioc_querycap		= cedrus_querycap,
 
-	.vidioc_enum_fmt_vid_cap	= cedrus_enum_fmt_vid_cap,
+	.vidioc_enum_fmt_vid_cap_mplane	= cedrus_enum_fmt_vid_cap,
 	.vidioc_g_fmt_vid_cap_mplane	= cedrus_g_fmt_vid_cap,
 	.vidioc_try_fmt_vid_cap_mplane	= cedrus_try_fmt_vid_cap,
 	.vidioc_s_fmt_vid_cap_mplane	= cedrus_s_fmt_vid_cap,
