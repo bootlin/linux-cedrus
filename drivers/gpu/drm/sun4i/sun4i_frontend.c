@@ -74,6 +74,10 @@ static void sun4i_frontend_scaler_init(struct sun4i_frontend *frontend)
 			     sun4i_frontend_vert_coef[i]);
 	}
 
+	regmap_write_bits(frontend->regs,
+			  SUN4I_FRONTEND_FRM_CTRL_REG,
+			  SUN4I_FRONTEND_FRM_CTRL_COEF_RDY,
+			  SUN4I_FRONTEND_FRM_CTRL_COEF_RDY);
 }
 
 int sun4i_frontend_init(struct sun4i_frontend *frontend)
@@ -434,11 +438,6 @@ int sun4i_frontend_update_formats(struct sun4i_frontend *frontend,
 			regmap_write(frontend->regs,
 				     SUN4I_FRONTEND_CSC_COEF_REG(i),
 				     sunxi_bt601_yuv2rgb_coef[i]);
-
-		regmap_update_bits(frontend->regs,
-				   SUN4I_FRONTEND_FRM_CTRL_REG,
-				   SUN4I_FRONTEND_FRM_CTRL_COEF_RDY,
-				   SUN4I_FRONTEND_FRM_CTRL_COEF_RDY);
 
 		bypass = 0;
 	} else {
