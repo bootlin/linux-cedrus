@@ -495,9 +495,10 @@ void sun4i_frontend_update_coord(struct sun4i_frontend *frontend,
 	}
 
 	regmap_write(frontend->regs, SUN4I_FRONTEND_CH0_INSIZE_REG,
-		     SUN4I_FRONTEND_INSIZE(luma_height, luma_width));
+		     SUN4I_FRONTEND_INSIZE(luma_height, luma_width - 1));
 	regmap_write(frontend->regs, SUN4I_FRONTEND_CH0_OUTSIZE_REG,
-		     SUN4I_FRONTEND_OUTSIZE(state->crtc_h, state->crtc_w));
+		     SUN4I_FRONTEND_OUTSIZE(state->crtc_h - 1,
+					    state->crtc_w - 1));
 	regmap_write(frontend->regs, SUN4I_FRONTEND_CH0_HORZFACT_REG,
 		     (luma_width << 16) / state->crtc_w);
 	regmap_write(frontend->regs, SUN4I_FRONTEND_CH0_VERTFACT_REG,
@@ -505,9 +506,11 @@ void sun4i_frontend_update_coord(struct sun4i_frontend *frontend,
 
 	/* These also have to be specified, even for interleaved formats. */
 	regmap_write(frontend->regs, SUN4I_FRONTEND_CH1_INSIZE_REG,
-		     SUN4I_FRONTEND_INSIZE(chroma_height, chroma_width));
+		     SUN4I_FRONTEND_INSIZE(chroma_height - 1,
+					   chroma_width - 1));
 	regmap_write(frontend->regs, SUN4I_FRONTEND_CH1_OUTSIZE_REG,
-		     SUN4I_FRONTEND_OUTSIZE(state->crtc_h, state->crtc_w));
+		     SUN4I_FRONTEND_OUTSIZE(state->crtc_h - 1,
+					    state->crtc_w - 1));
 	regmap_write(frontend->regs, SUN4I_FRONTEND_CH1_HORZFACT_REG,
 		     (chroma_width << 16) / state->crtc_w);
 	regmap_write(frontend->regs, SUN4I_FRONTEND_CH1_VERTFACT_REG,

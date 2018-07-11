@@ -73,10 +73,10 @@
 #define SUN4I_FRONTEND_CSC_COEF_REG(c)		(0x070 + (0x4 * (c)))
 
 #define SUN4I_FRONTEND_CH0_INSIZE_REG		0x100
-#define SUN4I_FRONTEND_INSIZE(h, w)			((((h) - 1) << 16) | (((w) - 1)))
+#define SUN4I_FRONTEND_INSIZE(h, w)			(((h) << 16) | (w))
 
 #define SUN4I_FRONTEND_CH0_OUTSIZE_REG		0x104
-#define SUN4I_FRONTEND_OUTSIZE(h, w)			((((h) - 1) << 16) | (((w) - 1)))
+#define SUN4I_FRONTEND_OUTSIZE(h, w)			(((h) << 16) | (w))
 
 #define SUN4I_FRONTEND_CH0_HORZFACT_REG		0x108
 #define SUN4I_FRONTEND_HORZFACT(i, f)			(((i) << 16) | (f))
