@@ -112,6 +112,7 @@ struct reset_control;
 
 struct sun4i_frontend_data {
 	bool	has_access_ctrl;
+	bool	has_coef_rdy_bit;
 };
 
 struct sun4i_frontend {
