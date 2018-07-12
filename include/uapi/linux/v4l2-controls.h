@@ -1130,7 +1130,7 @@ struct v4l2_ctrl_mpeg2_slice_params {
 	__u8	forward_ref_index;
 };
 
-/* Complex controls */
+/* Compounds controls */
 
 #define V4L2_H264_SPS_CONSTRAINT_SET0_FLAG			0x01
 #define V4L2_H264_SPS_CONSTRAINT_SET1_FLAG			0x02
@@ -1146,6 +1146,7 @@ struct v4l2_ctrl_mpeg2_slice_params {
 #define V4L2_H264_SPS_FLAG_FRAME_MBS_ONLY			0x10
 #define V4L2_H264_SPS_FLAG_MB_ADAPTIVE_FRAME_FIELD		0x20
 #define V4L2_H264_SPS_FLAG_DIRECT_8X8_INFERENCE			0x40
+
 struct v4l2_ctrl_h264_sps {
 	__u8 profile_idc;
 	__u8 constraint_set_flags;
@@ -1175,6 +1176,7 @@ struct v4l2_ctrl_h264_sps {
 #define V4L2_H264_PPS_FLAG_REDUNDANT_PIC_CNT_PRESENT			0x0020
 #define V4L2_H264_PPS_FLAG_TRANSFORM_8X8_MODE				0x0040
 #define V4L2_H264_PPS_FLAG_PIC_SCALING_MATRIX_PRESENT			0x0080
+
 struct v4l2_ctrl_h264_pps {
 	__u8 pic_parameter_set_id;
 	__u8 seq_parameter_set_id;
@@ -1219,6 +1221,7 @@ enum v4l2_h264_slice_type {
 #define V4L2_SLICE_FLAG_BOTTOM_FIELD		0x02
 #define V4L2_SLICE_FLAG_DIRECT_SPATIAL_MV_PRED	0x04
 #define V4L2_SLICE_FLAG_SP_FOR_SWITCH		0x08
+
 struct v4l2_ctrl_h264_slice_param {
 	/* Size in bytes, including header */
 	__u32 size;
@@ -1264,6 +1267,7 @@ struct v4l2_ctrl_h264_slice_param {
 #define V4L2_H264_DPB_ENTRY_FLAG_VALID		0x01
 #define V4L2_H264_DPB_ENTRY_FLAG_ACTIVE		0x02
 #define V4L2_H264_DPB_ENTRY_FLAG_LONG_TERM	0x04
+
 struct v4l2_h264_dpb_entry {
 	__u32 buf_index; /* v4l2_buffer index */
 	__u16 frame_num;
