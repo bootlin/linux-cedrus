@@ -34,13 +34,13 @@ static const struct cedrus_control cedrus_controls[] = {
 		.required	= true,
 	},
 	{
-		.id		= V4L2_CID_MPEG_VIDEO_H264_DECODE_PARAM,
+		.id		= V4L2_CID_MPEG_VIDEO_H264_DECODE_PARAMS,
 		.elem_size	= sizeof(struct v4l2_ctrl_h264_decode_param),
 		.codec		= CEDRUS_CODEC_H264,
 		.required	= true,
 	},
 	{
-		.id		= V4L2_CID_MPEG_VIDEO_H264_SLICE_PARAM,
+		.id		= V4L2_CID_MPEG_VIDEO_H264_SLICE_PARAMS,
 		.elem_size	= sizeof(struct v4l2_ctrl_h264_slice_param),
 		.codec		= CEDRUS_CODEC_H264,
 		.required	= true,
