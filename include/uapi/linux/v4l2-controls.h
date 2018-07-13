@@ -1209,18 +1209,16 @@ struct v4l2_h264_pred_weight_table {
 	struct v4l2_h264_weight_factors weight_factors[2];
 };
 
-enum v4l2_h264_slice_type {
-	V4L2_H264_SLICE_TYPE_P			= 0,
-	V4L2_H264_SLICE_TYPE_B			= 1,
-	V4L2_H264_SLICE_TYPE_I			= 2,
-	V4L2_H264_SLICE_TYPE_SP			= 3,
-	V4L2_H264_SLICE_TYPE_SI			= 4,
-};
+#define V4L2_H264_SLICE_TYPE_P				0
+#define V4L2_H264_SLICE_TYPE_B				1
+#define V4L2_H264_SLICE_TYPE_I				2
+#define V4L2_H264_SLICE_TYPE_SP				3
+#define V4L2_H264_SLICE_TYPE_SI				4
 
-#define V4L2_SLICE_FLAG_FIELD_PIC		0x01
-#define V4L2_SLICE_FLAG_BOTTOM_FIELD		0x02
-#define V4L2_SLICE_FLAG_DIRECT_SPATIAL_MV_PRED	0x04
-#define V4L2_SLICE_FLAG_SP_FOR_SWITCH		0x08
+#define V4L2_H264_SLICE_FLAG_FIELD_PIC			0x01
+#define V4L2_H264_SLICE_FLAG_BOTTOM_FIELD		0x02
+#define V4L2_H264_SLICE_FLAG_DIRECT_SPATIAL_MV_PRED	0x04
+#define V4L2_H264_SLICE_FLAG_SP_FOR_SWITCH		0x08
 
 struct v4l2_ctrl_h264_slice_param {
 	/* Size in bytes, including header */
@@ -1229,7 +1227,7 @@ struct v4l2_ctrl_h264_slice_param {
 	__u32 header_bit_size;
 
 	__u16 first_mb_in_slice;
-	enum v4l2_h264_slice_type slice_type;
+	__u8 slice_type;
 	__u8 pic_parameter_set_id;
 	__u8 colour_plane_id;
 	__u16 frame_num;
