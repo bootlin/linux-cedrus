@@ -123,7 +123,7 @@ static void cedrus_write_frame_list(struct cedrus_ctx *ctx,
 	output_buf = vb2_to_cedrus_buffer(dst_buf);
 	output_buf->codec.h264.position = position;
 
-	if (slice->flags & V4L2_SLICE_FLAG_FIELD_PIC)
+	if (slice->flags & V4L2_H264_SLICE_FLAG_FIELD_PIC)
 		output_buf->codec.h264.pic_type = CEDRUS_H264_PIC_TYPE_FIELD;
 	else if (sps->flags & V4L2_H264_SPS_FLAG_MB_ADAPTIVE_FRAME_FIELD)
 		output_buf->codec.h264.pic_type = CEDRUS_H264_PIC_TYPE_MBAFF;
@@ -356,11 +356,11 @@ static void cedrus_set_params(struct cedrus_ctx *ctx,
 	reg |= (slice->slice_type & 0xf) << 8;
 	reg |= slice->cabac_init_idc & 0x3;
 	reg |= BIT(5);
-	if (slice->flags & V4L2_SLICE_FLAG_FIELD_PIC)
+	if (slice->flags & V4L2_H264_SLICE_FLAG_FIELD_PIC)
 		reg |= BIT(4);
-	if (slice->flags & V4L2_SLICE_FLAG_BOTTOM_FIELD)
+	if (slice->flags & V4L2_H264_SLICE_FLAG_BOTTOM_FIELD)
 		reg |= BIT(3);
-	if (slice->flags & V4L2_SLICE_FLAG_DIRECT_SPATIAL_MV_PRED)
+	if (slice->flags & V4L2_H264_SLICE_FLAG_DIRECT_SPATIAL_MV_PRED)
 		reg |= BIT(2);
 	cedrus_write(dev, VE_H264_SLICE_HDR, reg);
 
