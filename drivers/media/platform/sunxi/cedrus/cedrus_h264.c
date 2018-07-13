@@ -93,13 +93,13 @@ static void cedrus_write_frame_list(struct cedrus_ctx *ctx,
 		const struct cedrus_buffer *cedrus_buf;
 		struct vb2_buffer *ref_buf;
 
-		if (!(dpb->flags & V4L2_H264_DPB_ENTRY_FLAG_ACTIVE))
-			continue;
-
 		ref_buf = ctx->dst_bufs[dpb->buf_index];
 		cedrus_buf = vb2_to_cedrus_buffer(ref_buf);
 		position = cedrus_buf->codec.h264.position;
 		used_dpbs |= BIT(position);
+
+		if (!(dpb->flags & V4L2_H264_DPB_ENTRY_FLAG_ACTIVE))
+			continue;
 
 		cedrus_fill_ref_pic(&pic_list[position], ref_buf, &ctx->dst_fmt,
 				    ctx->codec.h264.mv_col_buf_dma,
