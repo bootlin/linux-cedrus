@@ -93,6 +93,9 @@ static void cedrus_write_frame_list(struct cedrus_ctx *ctx,
 		const struct cedrus_buffer *cedrus_buf;
 		struct vb2_buffer *ref_buf;
 
+		if (!(dpb->flags & V4L2_H264_DPB_ENTRY_FLAG_VALID))
+			continue;
+
 		ref_buf = ctx->dst_bufs[dpb->buf_index];
 		cedrus_buf = vb2_to_cedrus_buffer(ref_buf);
 		position = cedrus_buf->codec.h264.position;
