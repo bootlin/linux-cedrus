@@ -1261,9 +1261,9 @@ struct v4l2_ctrl_h264_slice_param {
 	__u8 flags;
 };
 
-/* If not set, this entry is unused for reference. */
-#define V4L2_H264_DPB_ENTRY_FLAG_ACTIVE		0x01
-#define V4L2_H264_DPB_ENTRY_FLAG_LONG_TERM	0x02
+#define V4L2_H264_DPB_ENTRY_FLAG_VALID		0x01
+#define V4L2_H264_DPB_ENTRY_FLAG_ACTIVE		0x02
+#define V4L2_H264_DPB_ENTRY_FLAG_LONG_TERM	0x04
 struct v4l2_h264_dpb_entry {
 	__u32 buf_index; /* v4l2_buffer index */
 	__u16 frame_num;
