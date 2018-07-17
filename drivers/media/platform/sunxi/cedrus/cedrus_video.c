@@ -163,22 +163,32 @@ static int cedrus_querycap(struct file *file, void *priv,
 	return 0;
 }
 
-static int cedrus_enum_fmt(struct v4l2_fmtdesc *f, u32 direction)
+static int cedrus_enum_fmt(struct file *file, struct v4l2_fmtdesc *f,
+			   u32 direction)
 {
+	struct cedrus_ctx *ctx = cedrus_file2ctx(file);
+	struct cedrus_dev *dev = ctx->dev;
+	unsigned int capabilities = dev->capabilities;
+	struct cedrus_format *fmt;
 	unsigned int i, index;
-
-	printk(KERN_ERR "%s: index %d\n", __func__, f->index);
 
 	/* Index among formats that match the requested direction. */
 	index = 0;
 
 	for (i = 0; i < CEDRUS_FORMATS_COUNT; i++) {
-		if (cedrus_formats[i].directions & direction) {
-			if (index == f->index)
-				break;
+		fmt = &cedrus_formats[i];
 
-			index++;
-		}
+		if (fmt->capabilities && (fmt->capabilities & capabilities) !=
+		    fmt->capabilities)
+			continue;
+
+		if (!(cedrus_formats[i].directions & direction))
+			continue;
+
+		if (index == f->index)
+			break;
+
+		index++;
 	}
 
 	/* Matched format. */
@@ -194,13 +204,13 @@ static int cedrus_enum_fmt(struct v4l2_fmtdesc *f, u32 direction)
 static int cedrus_enum_fmt_vid_cap(struct file *file, void *priv,
 				   struct v4l2_fmtdesc *f)
 {
-	return cedrus_enum_fmt(f, CEDRUS_DECODE_DST);
+	return cedrus_enum_fmt(file, f, CEDRUS_DECODE_DST);
 }
 
 static int cedrus_enum_fmt_vid_out(struct file *file, void *priv,
 				  struct v4l2_fmtdesc *f)
 {
-	return cedrus_enum_fmt(f, CEDRUS_DECODE_SRC);
+	return cedrus_enum_fmt(file, f, CEDRUS_DECODE_SRC);
 }
 
 static int cedrus_g_fmt_vid_cap(struct file *file, void *priv,
