@@ -35,6 +35,8 @@
 struct sun4i_backend_quirks {
 	/* backend <-> TCON muxing selection done in backend */
 	bool needs_output_muxing;
+	/* alpha at the lowest z position is not always supported */
+	bool supports_lowest_plane_alpha;
 };
 
 static void sun4i_backend_apply_color_correction(struct sunxi_engine *engine)
@@ -484,6 +486,7 @@ static void sun4i_backend_atomic_begin(struct sunxi_engine *engine,
 static int sun4i_backend_atomic_check(struct sunxi_engine *engine,
 				      struct drm_crtc_state *crtc_state)
 {
+	struct sun4i_backend *backend = engine_to_sun4i_backend(engine);
 	struct drm_plane_state *plane_states[SUN4I_BACKEND_NUM_LAYERS] = { 0 };
 	struct drm_atomic_state *state = crtc_state->state;
 	struct drm_device *drm = state->dev;
@@ -584,8 +587,9 @@ static int sun4i_backend_atomic_check(struct sunxi_engine *engine,
 	}
 
 	/* We can't have an alpha plane at the lowest position */
-	if (plane_states[0]->fb->format->has_alpha ||
-	    (plane_states[0]->alpha != DRM_BLEND_ALPHA_OPAQUE))
+	if ((plane_states[0]->fb->format->has_alpha ||
+	    (plane_states[0]->alpha != DRM_BLEND_ALPHA_OPAQUE)) &&
+	    !backend->quirks->supports_lowest_plane_alpha)
 		return -EINVAL;
 
 	for (i = 1; i < num_planes; i++) {
@@ -970,9 +974,11 @@ static const struct sun4i_backend_quirks sun6i_backend_quirks = {
 
 static const struct sun4i_backend_quirks sun7i_backend_quirks = {
 	.needs_output_muxing = true,
+	.supports_lowest_plane_alpha = true,
 };
 
 static const struct sun4i_backend_quirks sun8i_a33_backend_quirks = {
+	.supports_lowest_plane_alpha = true,
 };
 
 static const struct sun4i_backend_quirks sun9i_backend_quirks = {
