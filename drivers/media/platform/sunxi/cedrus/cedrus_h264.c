@@ -430,6 +430,12 @@ static void cedrus_h264_setup(struct cedrus_ctx *ctx,
 
 	cedrus_engine_enable(dev, CEDRUS_CODEC_H264);
 
+	cedrus_write(dev, VE_H264_SDROT_CTRL, 0);
+	cedrus_write(dev, VE_H264_EXTRA_BUFFER1,
+		     ctx->codec.h264.pic_info_buf_dma - PHYS_OFFSET);
+	cedrus_write(dev, VE_H264_EXTRA_BUFFER2,
+		     (ctx->codec.h264.pic_info_buf_dma - PHYS_OFFSET) + 0x48000);
+
 	cedrus_write_scaling_lists(ctx, run);
 	cedrus_write_frame_list(ctx, run);
 
