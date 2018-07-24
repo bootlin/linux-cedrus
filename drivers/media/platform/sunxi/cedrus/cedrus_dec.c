@@ -55,13 +55,8 @@ void cedrus_device_run(void *priv)
 	case V4L2_PIX_FMT_MPEG2_SLICE:
 		run.mpeg2.slice_params = cedrus_find_control_data(ctx,
 			V4L2_CID_MPEG_VIDEO_MPEG2_SLICE_PARAMS);
-
-		if (!run.mpeg2.slice_params) {
-			v4l2_err(&dev->v4l2_dev,
-				 "Missing MPEG2 frame params control\n");
-			ctx->job_abort = 1;
-			goto unlock_complete;
-		}
+		run.mpeg2.quantization = cedrus_find_control_data(ctx,
+			V4L2_CID_MPEG_VIDEO_MPEG2_QUANTIZATION);
 		break;
 
 	default:
