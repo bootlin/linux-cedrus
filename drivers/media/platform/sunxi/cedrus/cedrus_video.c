@@ -208,7 +208,7 @@ static int cedrus_enum_fmt_vid_cap(struct file *file, void *priv,
 }
 
 static int cedrus_enum_fmt_vid_out(struct file *file, void *priv,
-				  struct v4l2_fmtdesc *f)
+				   struct v4l2_fmtdesc *f)
 {
 	return cedrus_enum_fmt(file, f, CEDRUS_DECODE_SRC);
 }
@@ -257,7 +257,7 @@ static int cedrus_try_fmt_vid_cap(struct file *file, void *priv,
 	f->fmt.pix_mp.width = clamp(f->fmt.pix_mp.width, CEDRUS_MIN_WIDTH,
 				    CEDRUS_MAX_WIDTH);
 	f->fmt.pix_mp.height = clamp(f->fmt.pix_mp.height, CEDRUS_MIN_HEIGHT,
-				    CEDRUS_MAX_HEIGHT);
+				     CEDRUS_MAX_HEIGHT);
 
 	return 0;
 }

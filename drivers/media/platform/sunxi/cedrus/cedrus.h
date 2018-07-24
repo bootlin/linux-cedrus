@@ -138,7 +138,7 @@ static inline dma_addr_t cedrus_buf_addr(struct vb2_buffer *buf,
 {
 	dma_addr_t addr = vb2_dma_contig_plane_dma_addr(buf, 0);
 
-	return addr + (fmt ? (dma_addr_t) fmt->plane_fmt[0].bytesperline *
+	return addr + (fmt ? (dma_addr_t)fmt->plane_fmt[0].bytesperline *
 	       fmt->height * plane : 0);
 }
 

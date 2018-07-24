@@ -117,7 +117,7 @@ static int cedrus_request_validate(struct media_request *req)
 		}
 	}
 
-	if (ctx == NULL)
+	if (!ctx)
 		return -EINVAL;
 
 	parent_hdl = &ctx->hdl;
@@ -129,15 +129,16 @@ static int cedrus_request_validate(struct media_request *req)
 	}
 
 	for (i = 0; i < CEDRUS_CONTROLS_COUNT; i++) {
-		if (cedrus_controls[i].codec == ctx->current_codec &&
-		    cedrus_controls[i].required) {
-			ctrl_test = v4l2_ctrl_request_hdl_ctrl_find(hdl,
-				cedrus_controls[i].id);
-			if (!ctrl_test) {
-				v4l2_err(&ctx->dev->v4l2_dev,
-					 "Missing required codec control\n");
-				return -EINVAL;
-			}
+		if (cedrus_controls[i].codec != ctx->current_codec ||
+		    !cedrus_controls[i].required)
+			continue;
+
+		ctrl_test = v4l2_ctrl_request_hdl_ctrl_find(hdl,
+			cedrus_controls[i].id);
+		if (!ctrl_test) {
+			v4l2_err(&ctx->dev->v4l2_dev,
+				 "Missing required codec control\n");
+			return -EINVAL;
 		}
 	}
 
