@@ -1591,6 +1591,7 @@ struct v4l2_ext_control {
 		__u16 __user *p_u16;
 		__u32 __user *p_u32;
 		struct v4l2_ctrl_mpeg2_slice_params __user *p_mpeg2_slice_params;
+		struct v4l2_ctrl_mpeg2_quantization __user *p_mpeg2_quantization;
 		struct v4l2_ctrl_h264_sps __user *p_h264_sps;
 		struct v4l2_ctrl_h264_pps __user *p_h264_pps;
 		struct v4l2_ctrl_h264_scaling_matrix __user *p_h264_scal_mtrx;
@@ -1642,11 +1643,12 @@ enum v4l2_ctrl_type {
 	V4L2_CTRL_TYPE_U16	     = 0x0101,
 	V4L2_CTRL_TYPE_U32	     = 0x0102,
 	V4L2_CTRL_TYPE_MPEG2_SLICE_PARAMS = 0x0103,
-	V4L2_CTRL_TYPE_H264_SPS      = 0x0104,
-	V4L2_CTRL_TYPE_H264_PPS      = 0x0105,
-	V4L2_CTRL_TYPE_H264_SCALING_MATRIX = 0x0106,
-	V4L2_CTRL_TYPE_H264_SLICE_PARAMS = 0x0107,
-	V4L2_CTRL_TYPE_H264_DECODE_PARAMS = 0x0108,
+	V4L2_CTRL_TYPE_MPEG2_QUANTIZATION = 0x0104,
+	V4L2_CTRL_TYPE_H264_SPS      = 0x0105,
+	V4L2_CTRL_TYPE_H264_PPS      = 0x0106,
+	V4L2_CTRL_TYPE_H264_SCALING_MATRIX = 0x0107,
+	V4L2_CTRL_TYPE_H264_SLICE_PARAMS = 0x0108,
+	V4L2_CTRL_TYPE_H264_DECODE_PARAMS = 0x0109,
 };
 
 /*  Used in the VIDIOC_QUERYCTRL ioctl for querying controls */

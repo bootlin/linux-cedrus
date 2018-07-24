@@ -565,7 +565,8 @@ enum v4l2_mpeg_video_mpeg4_profile {
 };
 #define V4L2_CID_MPEG_VIDEO_MPEG4_QPEL		(V4L2_CID_MPEG_BASE+407)
 
-#define V4L2_CID_MPEG_VIDEO_MPEG2_SLICE_PARAMS  (V4L2_CID_MPEG_BASE+450)
+#define V4L2_CID_MPEG_VIDEO_MPEG2_SLICE_PARAMS	(V4L2_CID_MPEG_BASE+450)
+#define V4L2_CID_MPEG_VIDEO_MPEG2_QUANTIZATION	(V4L2_CID_MPEG_BASE+451)
 
 /*  Control IDs for VP8 streams
  *  Although VP8 is not part of MPEG we add these controls to the MPEG class
@@ -1128,6 +1129,18 @@ struct v4l2_ctrl_mpeg2_slice_params {
 
 	__u8	backward_ref_index;
 	__u8	forward_ref_index;
+};
+
+struct v4l2_ctrl_mpeg2_quantization {
+	__u8	load_intra_quantiser_matrix : 1;
+	__u8	load_non_intra_quantiser_matrix : 1;
+	__u8	load_chroma_intra_quantiser_matrix : 1;
+	__u8	load_chroma_non_intra_quantiser_matrix : 1;
+
+	__u8	intra_quantiser_matrix[64];
+	__u8	non_intra_quantiser_matrix[64];
+	__u8	chroma_intra_quantiser_matrix[64];
+	__u8	chroma_non_intra_quantiser_matrix[64];
 };
 
 /* Compounds controls */
