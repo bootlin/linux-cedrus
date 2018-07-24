@@ -28,7 +28,6 @@ void cedrus_device_run(void *priv)
 	struct cedrus_run run = { 0 };
 	struct media_request *src_req;
 	unsigned long flags;
-	bool error = true;
 
 	run.src = v4l2_m2m_next_src_buf(ctx->fh.m2m_ctx);
 	if (!run.src) {
@@ -77,12 +76,6 @@ void cedrus_device_run(void *priv)
 
 	default:
 		ctx->job_abort = 1;
-	}
-
-	if (error) {
-		v4l2_err(&dev->v4l2_dev, "Invalid controls for decoding\n");
-		ctx->job_abort = 1;
-		goto unlock_complete;
 	}
 
 	if (!ctx->job_abort)
