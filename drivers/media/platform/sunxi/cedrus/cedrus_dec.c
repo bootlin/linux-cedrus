@@ -30,16 +30,7 @@ void cedrus_device_run(void *priv)
 	unsigned long flags;
 
 	run.src = v4l2_m2m_next_src_buf(ctx->fh.m2m_ctx);
-	if (!run.src) {
-		v4l2_err(&dev->v4l2_dev, "No source buffer to prepare\n");
-		return;
-	}
-
 	run.dst = v4l2_m2m_next_dst_buf(ctx->fh.m2m_ctx);
-	if (!run.dst) {
-		v4l2_err(&dev->v4l2_dev, "No destination buffer to prepare\n");
-		return;
-	}
 
 	/* Apply request(s) controls if needed. */
 	src_req = run.src->vb2_buf.req_obj.req;

@@ -23,7 +23,7 @@
 
 #include <linux/platform_device.h>
 
-#define CEDRUS_NAME	"cedrus"
+#define CEDRUS_NAME			"cedrus"
 
 #define CEDRUS_CAPABILITY_UNTILED	BIT(0)
 
@@ -88,6 +88,10 @@ struct cedrus_dec_ops {
 	int (*start)(struct cedrus_ctx *ctx);
 	void (*stop)(struct cedrus_ctx *ctx);
 	void (*trigger)(struct cedrus_ctx *ctx);
+};
+
+struct cedrus_variant {
+	unsigned int capabilities;
 };
 
 struct cedrus_dev {
