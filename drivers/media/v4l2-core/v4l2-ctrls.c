@@ -845,6 +845,7 @@ const char *v4l2_ctrl_get_name(u32 id)
 	case V4L2_CID_MPEG_VIDEO_REPEAT_SEQ_HEADER:		return "Repeat Sequence Header";
 	case V4L2_CID_MPEG_VIDEO_FORCE_KEY_FRAME:		return "Force Key Frame";
 	case V4L2_CID_MPEG_VIDEO_MPEG2_SLICE_PARAMS:		return "MPEG2 Slice Header";
+	case V4L2_CID_MPEG_VIDEO_MPEG2_QUANTIZATION:		return "MPEG2 Quantization Matrices";
 
 	/* VPX controls */
 	case V4L2_CID_MPEG_VIDEO_VPX_NUM_PARTITIONS:		return "VPX Number of Partitions";
@@ -1296,6 +1297,9 @@ void v4l2_ctrl_fill(u32 id, const char **name, enum v4l2_ctrl_type *type,
 	case V4L2_CID_MPEG_VIDEO_MPEG2_SLICE_PARAMS:
 		*type = V4L2_CTRL_TYPE_MPEG2_SLICE_PARAMS;
 		break;
+	case V4L2_CID_MPEG_VIDEO_MPEG2_QUANTIZATION:
+		*type = V4L2_CTRL_TYPE_MPEG2_QUANTIZATION;
+		break;
 	default:
 		*type = V4L2_CTRL_TYPE_INTEGER;
 		break;
@@ -1651,6 +1655,9 @@ static int std_validate(const struct v4l2_ctrl *ctrl, u32 idx,
 		    p_mpeg2_slice_params->forward_ref_index > VIDEO_MAX_FRAME)
 			return -EINVAL;
 
+		return 0;
+
+	case V4L2_CTRL_TYPE_MPEG2_QUANTIZATION:
 		return 0;
 
 	default:
@@ -2229,6 +2236,9 @@ static struct v4l2_ctrl *v4l2_ctrl_new(struct v4l2_ctrl_handler *hdl,
 		break;
 	case V4L2_CTRL_TYPE_MPEG2_SLICE_PARAMS:
 		elem_size = sizeof(struct v4l2_ctrl_mpeg2_slice_params);
+		break;
+	case V4L2_CTRL_TYPE_MPEG2_QUANTIZATION:
+		elem_size = sizeof(struct v4l2_ctrl_mpeg2_quantization);
 		break;
 	default:
 		if (type < V4L2_CTRL_COMPOUND_TYPES)

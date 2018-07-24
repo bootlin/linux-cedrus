@@ -1500,7 +1500,7 @@ enum v4l2_mpeg_video_h264_hierarchical_coding_type -
 .. _v4l2-mpeg-mpeg2:
 
 ``V4L2_CID_MPEG_VIDEO_MPEG2_SLICE_PARAMS (struct)``
-    Specifies the slice parameters (also known as slice header) for an
+    Specifies the slice parameters (also known as slice header) for the
     associated MPEG-2 slice data. This includes all the necessary
     parameters for configuring a hardware decoder pipeline for MPEG-2.
 
@@ -1570,6 +1570,54 @@ enum v4l2_mpeg_video_h264_hierarchical_coding_type -
       - ``forward_ref_index``
       - Index for the V4L2 buffer to use as forward reference, used with
         P-coded frames.
+    * - :cspan:`2`
+
+``V4L2_CID_MPEG_VIDEO_MPEG2_QUANTIZATION (struct)``
+    Specifies quantization matrices for the associated MPEG-2 slice data.
+
+.. tabularcolumns:: |p{2.0cm}|p{4.0cm}|p{11.0cm}|
+
+.. c:type:: v4l2_ctrl_mpeg2_quantization
+
+.. cssclass:: longtable
+
+.. flat-table:: struct v4l2_ctrl_mpeg2_quantization
+    :header-rows:  0
+    :stub-columns: 0
+    :widths:       1 1 2
+
+    * - __u8
+      - ``load_intra_quantiser_matrix``
+      - One bit to indicate whether to load the intra quantiser matrix.
+    * - __u32
+      - ``load_non_intra_quantiser_matrix``
+      - One bit to indicate whether to load the non-intra quantiser matrix.
+    * - __u32
+      - ``load_chroma_intra_quantiser_matrix``
+      - One bit to indicate whether to load the chroma intra quantiser matrix,
+        only relevant for non-4:2:0 YUV formats.
+    * - __u32
+      - ``load_chroma_non_intra_quantiser_matrix``
+      - One bit to indicate whether to load the non-chroma intra quantiser
+        matrix, only relevant for non-4:2:0 YUV formats.
+    * - __u32
+      - ``intra_quantiser_matrix[64]``
+      - The intra quantiser matrix coefficients, in zigzag scanning order.
+        It is relevant for both luma and chroma components, although it can be
+        superseded by the chroma-specific matrix for non-4:2:0 YUV formats.
+    * - __u32
+      - ``non_intra_quantiser_matrix[64]``
+      - The non-intra quantiser matrix coefficients, in zigzag scanning order.
+        It is relevant for both luma and chroma components, although it can be
+        superseded by the chroma-specific matrix for non-4:2:0 YUV formats.
+    * - __u32
+      - ``chroma_intra_quantiser_matrix[64]``
+      - The intra quantiser matrix coefficients for the chroma YUV component,
+        in zigzag scanning order. Only relevant for non-4:2:0 YUV formats.
+    * - __u32
+      - ``chroma_non_intra_quantiser_matrix[64]``
+      - The non-intra quantiser matrix coefficients for the chroma YUV component,
+        in zigzag scanning order. Only relevant for non-4:2:0 YUV formats.
     * - :cspan:`2`
 
 MFC 5.1 MPEG Controls
