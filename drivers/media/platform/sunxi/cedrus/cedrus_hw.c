@@ -41,7 +41,7 @@ int cedrus_engine_enable(struct cedrus_dev *dev, enum cedrus_codec codec)
 		break;
 
 	case CEDRUS_CODEC_H264:
-		reg |= VE_CTRL_DEC_MODE_H264;
+		reg |= VE_MODE_DEC_H264;
 		break;
 
 	default:
