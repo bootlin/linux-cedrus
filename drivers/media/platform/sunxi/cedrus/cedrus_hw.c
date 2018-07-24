@@ -32,17 +32,12 @@ int cedrus_engine_enable(struct cedrus_dev *dev, enum cedrus_codec codec)
 {
 	u32 reg = 0;
 
-	/*
-	 * FIXME: This is only valid on 32-bits DDR's, we should test
-	 * it on the A13/A33.
-	 */
-	reg |= VE_CTRL_REC_WR_MODE_2MB;
-
-	reg |= VE_CTRL_CACHE_BUS_BW_128;
+	reg |= VE_MODE_REC_WR_MODE_2MB;
+	reg |= VE_MODE_DDR_MODE_BW_128;
 
 	switch (codec) {
 	case CEDRUS_CODEC_MPEG2:
-		reg |= VE_CTRL_DEC_MODE_MPEG;
+		reg |= VE_MODE_DEC_MPEG;
 		break;
 
 	case CEDRUS_CODEC_H264:
@@ -53,14 +48,14 @@ int cedrus_engine_enable(struct cedrus_dev *dev, enum cedrus_codec codec)
 		return -EINVAL;
 	}
 
-	cedrus_write(dev, VE_CTRL, reg);
+	cedrus_write(dev, VE_MODE, reg);
 
 	return 0;
 }
 
 void cedrus_engine_disable(struct cedrus_dev *dev)
 {
-	cedrus_write(dev, VE_CTRL, VE_CTRL_DEC_MODE_DISABLED);
+	cedrus_write(dev, VE_MODE, VE_MODE_DISABLED);
 }
 
 void cedrus_dst_format_set(struct cedrus_dev *dev,
@@ -75,17 +70,19 @@ void cedrus_dst_format_set(struct cedrus_dev *dev,
 	case V4L2_PIX_FMT_NV12:
 		chroma_size = ALIGN(width, 32) * ALIGN(height / 2, 32);
 
-		reg = VE_PRIMARY_OUT_FMT_NV12 | VE_SECONDARY_SPECIAL_OUT_FMT_NV12;
+		reg = VE_PRIMARY_OUT_FMT_NV12 |
+		      VE_SECONDARY_SPECIAL_OUT_FMT_NV12;
 		cedrus_write(dev, VE_PRIMARY_OUT_FMT, reg);
 
-		reg = VE_SECONDARY_OUT_FMT_SPECIAL | (chroma_size / 2);
+		reg = VE_CHROMA_BUF_LEN_SDRT(chroma_size / 2) |
+		      VE_SECONDARY_OUT_FMT_SPECIAL;
 		cedrus_write(dev, VE_CHROMA_BUF_LEN, reg);
 
 		reg = chroma_size / 2;
 		cedrus_write(dev, VE_PRIMARY_CHROMA_BUF_LEN, reg);
 
-		reg = (ALIGN(width / 2, 16) << VE_CHROMA_LINE_STRIDE_SHIFT) |
-		      (ALIGN(width, 32) << VE_LUMA_LINE_STRIDE_SHIFT);
+		reg = VE_PRIMARY_FB_LINE_STRIDE_LUMA(ALIGN(width, 32)) |
+		      VE_PRIMARY_FB_LINE_STRIDE_CHROMA(ALIGN(width / 2, 16));
 		cedrus_write(dev, VE_PRIMARY_FB_LINE_STRIDE, reg);
 
 		break;
@@ -175,7 +172,8 @@ static void cedrus_hw_set_capabilities(struct cedrus_dev *dev)
 {
 	unsigned int engine_version;
 
-	engine_version = cedrus_read(dev, VE_VERSION) >> VE_VERSION_SHIFT;
+	engine_version = cedrus_read(dev, VE_VERSION);
+	engine_version >>= VE_VERSION_SHIFT;
 
 	if (engine_version >= 0x1667)
 		dev->capabilities |= CEDRUS_CAPABILITY_UNTILED;

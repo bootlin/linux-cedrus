@@ -62,6 +62,7 @@ struct cedrus_h264_run {
 
 struct cedrus_mpeg2_run {
 	const struct v4l2_ctrl_mpeg2_slice_params	*slice_params;
+	const struct v4l2_ctrl_mpeg2_quantization	*quantization;
 };
 
 struct cedrus_run {

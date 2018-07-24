@@ -34,6 +34,12 @@ static const struct cedrus_control cedrus_controls[] = {
 		.required	= true,
 	},
 	{
+		.id		= V4L2_CID_MPEG_VIDEO_MPEG2_QUANTIZATION,
+		.elem_size	= sizeof(struct v4l2_ctrl_mpeg2_quantization),
+		.codec		= CEDRUS_CODEC_MPEG2,
+		.required	= false,
+	},
+	{
 		.id		= V4L2_CID_MPEG_VIDEO_H264_DECODE_PARAMS,
 		.elem_size	= sizeof(struct v4l2_ctrl_h264_decode_param),
 		.codec		= CEDRUS_CODEC_H264,

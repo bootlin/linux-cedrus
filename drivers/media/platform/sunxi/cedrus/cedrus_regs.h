@@ -4,138 +4,237 @@
  *
  * Copyright (C) 2018 Paul Kocialkowski <paul.kocialkowski@bootlin.com>
  * Copyright (C) 2016 Florent Revest <florent.revest@free-electrons.com>
- *
- * Based on the vim2m driver, that is:
- *
- * Copyright (c) 2009-2010 Samsung Electronics Co., Ltd.
- * Pawel Osciak, <pawel@osciak.com>
- * Marek Szyprowski, <m.szyprowski@samsung.com>
+ * Copyright (c) 2013-2016 Jens Kuske <jenskuske@gmail.com>
  */
 
 #ifndef _CEDRUS_REGS_H_
 #define _CEDRUS_REGS_H_
 
+#define VE_ENGINE_DEC_MPEG	0x100
+#define VE_ENGINE_DEC_H264	0x200
+
 /*
- * For more information, consult http://linux-sunxi.org/VE_Register_guide
+ * Common acronyms used in register descriptions:
+ * * VLD : Variable-Length Decoder
+ * * IQ: Inverse Quantization
+ * * IDCT: Inverse Discrete Cosine Transform
+ * * MC: Motion Compensation
+ * * STCD: Start Code Detect
+ * * SDRT: Scale Down and Rotate
  */
 
-/* VE_MPEG_CTRL:
- * The bit 3 (0x8) is used to enable IRQs
- * The other bits are unknown but needed
- */
-#define VE_MPEG_CTRL_MPEG2	0x800001b8
-#define VE_MPEG_CTRL_MPEG4	(0x80084118 | BIT(7))
-#define VE_MPEG_CTRL_MPEG4_P	(VE_MPEG_CTRL_MPEG4 | BIT(12))
+#define VE_MODE					0x00
 
-/* VE_MPEG_VLD_ADDR:
- * The bits 27 to 4 are used for the address
- * The bits 31 to 28 (0x7) are used to select the MPEG or JPEG engine
- */
-#define VE_MPEG_VLD_ADDR_VAL(x)	((x & 0x0ffffff0) | (x >> 28) | (0x7 << 28))
+#define VE_MODE_REC_WR_MODE_2MB			(0x01 << 20)
+#define VE_MODE_REC_WR_MODE_1MB			(0x00 << 20)
+#define VE_MODE_DDR_MODE_BW_128			(0x03 << 16)
+#define VE_MODE_DDR_MODE_BW_256			(0x02 << 16)
+#define VE_MODE_DISABLED			(0x07 << 0)
+#define VE_MODE_DEC_H265			(0x04 << 0)
+#define VE_MODE_DEC_H264			(0x01 << 0)
+#define VE_MODE_DEC_MPEG			(0x00 << 0)
 
-/* VE_MPEG_TRIGGER:
- * The first three bits are used to trigger the engine
- * The bits 24 to 26 are used to select the input format (1 for MPEG1, 2 for
- *                           MPEG2, 4 for MPEG4)
- * The bit 21 (0x8) is used to disable bitstream error handling
- *
- * In MPEG4 the w*h value is somehow used for an offset, unknown but needed
- */
-#define VE_TRIG_MPEG1		0x8100000f
-#define VE_TRIG_MPEG2		0x8200000f
-#define VE_TRIG_MPEG4(w, h)	(0x8400000d | ((w * h) << 8))
+#define VE_PRIMARY_CHROMA_BUF_LEN		0xc4
+#define VE_PRIMARY_FB_LINE_STRIDE		0xc8
 
-/* VE_MPEG_SDROT_CTRL:
- * The bit 8 at zero is used to disable x downscaling
- * The bit 10 at 0 is used to disable y downscaling
- * The other bits are unknown but needed
- */
-#define VE_NO_SDROT_CTRL	0x40620000
+#define VE_PRIMARY_FB_LINE_STRIDE_CHROMA(s)	(((s) << 16) & GENMASK(31, 16))
+#define VE_PRIMARY_FB_LINE_STRIDE_LUMA(s)	(((s) << 0) & GENMASK(15, 0))
 
-/* Decent size fo video buffering verifier */
-#define VBV_SIZE		(1024 * 1024)
+#define VE_CHROMA_BUF_LEN			0xe8
 
-/* Registers addresses */
-#define VE_CTRL				0x000
-/*
- * The datasheet states that this should be set to 2MB on a 32bits
- * DDR-3.
- */
-#define VE_CTRL_REC_WR_MODE_2MB			(1 << 20)
-#define VE_CTRL_REC_WR_MODE_1MB			(0 << 20)
+#define VE_SECONDARY_OUT_FMT_MB32_NV12		(0x00 << 30)
+#define VE_SECONDARY_OUT_FMT_SPECIAL		(0x01 << 30)
+#define VE_SECONDARY_OUT_FMT_YU12		(0x02 << 30)
+#define VE_SECONDARY_OUT_FMT_YV12		(0x03 << 30)
+#define VE_CHROMA_BUF_LEN_SDRT(l)		((l) & GENMASK(27, 0))
 
-#define VE_CTRL_CACHE_BUS_BW_128		(3 << 16)
-#define VE_CTRL_CACHE_BUS_BW_256		(2 << 16)
+#define VE_PRIMARY_OUT_FMT			0xec
 
-#define VE_CTRL_DEC_MODE_DISABLED		(7 << 0)
-#define VE_CTRL_DEC_MODE_H265			(4 << 0)
-#define VE_CTRL_DEC_MODE_H264			(1 << 0)
-#define VE_CTRL_DEC_MODE_MPEG			(0 << 0)
+#define VE_PRIMARY_OUT_FMT_MB32_NV12		(0x00 << 4)
+#define VE_PRIMARY_OUT_FMT_MB128_NV12		(0x01 << 4)
+#define VE_PRIMARY_OUT_FMT_YU12			(0x02 << 4)
+#define VE_PRIMARY_OUT_FMT_YV12			(0x03 << 4)
+#define VE_PRIMARY_OUT_FMT_NV12			(0x04 << 4)
+#define VE_PRIMARY_OUT_FMT_NV21			(0x05 << 4)
+#define VE_SECONDARY_SPECIAL_OUT_FMT_MB32_NV12	(0x00 << 0)
+#define VE_SECONDARY_SPECIAL_OUT_FMT_MB128_NV12	(0x01 << 0)
+#define VE_SECONDARY_SPECIAL_OUT_FMT_YU12	(0x02 << 0)
+#define VE_SECONDARY_SPECIAL_OUT_FMT_YV12	(0x03 << 0)
+#define VE_SECONDARY_SPECIAL_OUT_FMT_NV12	(0x04 << 0)
+#define VE_SECONDARY_SPECIAL_OUT_FMT_NV21	(0x05 << 0)
 
-#define VE_PRIMARY_OUT_FMT_MB32_NV12		(0 << 4)
-#define VE_PRIMARY_OUT_FMT_MB128_NV12		(1 << 4)
-#define VE_PRIMARY_OUT_FMT_YU12			(2 << 4)
-#define VE_PRIMARY_OUT_FMT_YV12			(3 << 4)
-#define VE_PRIMARY_OUT_FMT_NV12			(4 << 4)
-#define VE_PRIMARY_OUT_FMT_NV21			(5 << 4)
-
-#define VE_SECONDARY_SPECIAL_OUT_FMT_MB32_NV12	(0 << 0)
-#define VE_SECONDARY_SPECIAL_OUT_FMT_MB128_NV12	(1 << 0)
-#define VE_SECONDARY_SPECIAL_OUT_FMT_YU12	(2 << 0)
-#define VE_SECONDARY_SPECIAL_OUT_FMT_YV12	(3 << 0)
-#define VE_SECONDARY_SPECIAL_OUT_FMT_NV12	(4 << 0)
-#define VE_SECONDARY_SPECIAL_OUT_FMT_NV21	(5 << 0)
-
-#define VE_SECONDARY_OUT_FMT_MB32_NV12		(0 << 30)
-#define VE_SECONDARY_OUT_FMT_SPECIAL		(1 << 30)
-#define VE_SECONDARY_OUT_FMT_YU12		(2 << 30)
-#define VE_SECONDARY_OUT_FMT_YV12		(3 << 30)
-
-#define VE_LUMA_LINE_STRIDE_SHIFT		0
-#define VE_CHROMA_LINE_STRIDE_SHIFT		16
+#define VE_VERSION				0xf0
 
 #define VE_VERSION_SHIFT			16
 
-#define VE_PRIMARY_CHROMA_BUF_LEN	0x0c4
-#define VE_PRIMARY_FB_LINE_STRIDE	0x0c8
-#define VE_CHROMA_BUF_LEN		0x0e8
-#define VE_PRIMARY_OUT_FMT		0x0ec
-#define VE_VERSION			0x0f0
+#define VE_DEC_MPEG_MP12HDR			(VE_ENGINE_DEC_MPEG + 0x00)
 
-#define VE_MPEG_PIC_HDR			0x100
-#define VE_MPEG_VOP_HDR			0x104
-#define VE_MPEG_SIZE			0x108
-#define VE_MPEG_FRAME_SIZE		0x10c
-#define VE_MPEG_MBA			0x110
-#define VE_MPEG_CTRL			0x114
-#define VE_MPEG_TRIGGER			0x118
-#define VE_MPEG_STATUS			0x11c
-#define VE_MPEG_TRBTRD_FIELD		0x120
-#define VE_MPEG_TRBTRD_FRAME		0x124
-#define VE_MPEG_VLD_ADDR		0x128
-#define VE_MPEG_VLD_OFFSET		0x12c
-#define VE_MPEG_VLD_LEN			0x130
-#define VE_MPEG_VLD_END			0x134
-#define VE_MPEG_MBH_ADDR		0x138
-#define VE_MPEG_DCAC_ADDR		0x13c
-#define VE_MPEG_NCF_ADDR		0x144
-#define VE_MPEG_REC_LUMA		0x148
-#define VE_MPEG_REC_CHROMA		0x14c
-#define VE_MPEG_FWD_LUMA		0x150
-#define VE_MPEG_FWD_CHROMA		0x154
-#define VE_MPEG_BACK_LUMA		0x158
-#define VE_MPEG_BACK_CHROMA		0x15c
-#define VE_MPEG_IQ_MIN_INPUT		0x180
-#define VE_MPEG_QP_INPUT		0x184
-#define VE_MPEG_JPEG_SIZE		0x1b8
-#define VE_MPEG_JPEG_RES_INT		0x1c0
-#define VE_MPEG_ERROR			0x1c4
-#define VE_MPEG_CTR_MB			0x1c8
-#define VE_MPEG_ROT_LUMA		0x1cc
-#define VE_MPEG_ROT_CHROMA		0x1d0
-#define VE_MPEG_SDROT_CTRL		0x1d4
-#define VE_MPEG_RAM_WRITE_PTR		0x1e0
-#define VE_MPEG_RAM_WRITE_DATA		0x1e4
+#define VE_DEC_MPEG_MP12HDR_SLICE_TYPE(t)	(((t) << 28) & GENMASK(30, 28))
+#define VE_DEC_MPEG_MP12HDR_F_CODE_SHIFT(x, y)	(24 - 4 * (y) - 8 * (x))
+#define VE_DEC_MPEG_MP12HDR_F_CODE_MASK(x, y) \
+	GENMASK(VE_DEC_MPEG_MP12HDR_F_CODE_SHIFT(x, y) + 3, \
+		VE_DEC_MPEG_MP12HDR_F_CODE_SHIFT(x, y))
+#define VE_DEC_MPEG_MP12HDR_F_CODE(x, y, v) \
+	(((v) << VE_DEC_MPEG_MP12HDR_F_CODE_SHIFT(x, y)) & \
+	 VE_DEC_MPEG_MP12HDR_F_CODE_MASK(x, y))
+#define VE_DEC_MPEG_MP12HDR_INTRA_DC_PRECISION(p) \
+	(((p) << 10) & GENMASK(11, 10))
+#define VE_DEC_MPEG_MP12HDR_INTRA_PICTURE_STRUCTURE(s) \
+	(((s) << 8) & GENMASK(9, 8))
+#define VE_DEC_MPEG_MP12HDR_TOP_FIELD_FIRST(v) \
+	((v) ? BIT(7) : 0)
+#define VE_DEC_MPEG_MP12HDR_FRAME_PRED_FRAME_DCT(v) \
+	((v) ? BIT(6) : 0)
+#define VE_DEC_MPEG_MP12HDR_CONCEALMENT_MOTION_VECTORS(v) \
+	((v) ? BIT(5) : 0)
+#define VE_DEC_MPEG_MP12HDR_Q_SCALE_TYPE(v) \
+	((v) ? BIT(4) : 0)
+#define VE_DEC_MPEG_MP12HDR_INTRA_VLC_FORMAT(v) \
+	((v) ? BIT(3) : 0)
+#define VE_DEC_MPEG_MP12HDR_ALTERNATE_SCAN(v) \
+	((v) ? BIT(2) : 0)
+#define VE_DEC_MPEG_MP12HDR_FULL_PEL_FORWARD_VECTOR(v) \
+	((v) ? BIT(1) : 0)
+#define VE_DEC_MPEG_MP12HDR_FULL_PEL_BACKWARD_VECTOR(v) \
+	((v) ? BIT(0) : 0)
+
+#define VE_DEC_MPEG_PICCODEDSIZE		(VE_ENGINE_DEC_MPEG + 0x08)
+
+#define VE_DEC_MPEG_PICCODEDSIZE_WIDTH(w) \
+	((DIV_ROUND_UP((w), 16) << 8) & GENMASK(15, 8))
+#define VE_DEC_MPEG_PICCODEDSIZE_HEIGHT(h) \
+	((DIV_ROUND_UP((h), 16) << 0) & GENMASK(7, 0))
+
+#define VE_DEC_MPEG_PICBOUNDSIZE		(VE_ENGINE_DEC_MPEG + 0x0c)
+
+#define VE_DEC_MPEG_PICBOUNDSIZE_WIDTH(w) 	(((w) << 16) & GENMASK(27, 16))
+#define VE_DEC_MPEG_PICBOUNDSIZE_HEIGHT(h)	(((h) << 0) & GENMASK(11, 0))
+
+#define VE_DEC_MPEG_MBADDR			(VE_ENGINE_DEC_MPEG + 0x10)
+
+#define VE_DEC_MPEG_MBADDR_X(w)			(((w) << 8) & GENMASK(15, 8))
+#define VE_DEC_MPEG_MBADDR_Y(h)			(((h) << 0) & GENMASK(0, 7))
+
+#define VE_DEC_MPEG_CTRL			(VE_ENGINE_DEC_MPEG + 0x14)
+
+#define VE_DEC_MPEG_CTRL_MC_CACHE_EN		BIT(31)
+#define VE_DEC_MPEG_CTRL_SW_VLD			BIT(27)
+#define VE_DEC_MPEG_CTRL_SW_IQ_IS		BIT(17)
+#define VE_DEC_MPEG_CTRL_QP_AC_DC_OUT_EN	BIT(14)
+#define VE_DEC_MPEG_CTRL_ROTATE_SCALE_OUT_EN	BIT(8)
+#define VE_DEC_MPEG_CTRL_MC_NO_WRITEBACK	BIT(7)
+#define VE_DEC_MPEG_CTRL_ROTATE_IRQ_EN		BIT(6)
+#define VE_DEC_MPEG_CTRL_VLD_DATA_REQ_IRQ_EN	BIT(5)
+#define VE_DEC_MPEG_CTRL_ERROR_IRQ_EN		BIT(4)
+#define VE_DEC_MPEG_CTRL_FINISH_IRQ_EN		BIT(3)
+
+#define VE_DEC_MPEG_CTRL_IRQ_MASK \
+	(VE_DEC_MPEG_CTRL_FINISH_IRQ_EN | VE_DEC_MPEG_CTRL_ERROR_IRQ_EN | \
+	 VE_DEC_MPEG_CTRL_VLD_DATA_REQ_IRQ_EN)
+
+#define VE_DEC_MPEG_TRIGGER			(VE_ENGINE_DEC_MPEG + 0x18)
+
+#define VE_DEC_MPEG_TRIGGER_MB_BOUNDARY		BIT(31)
+
+#define VE_DEC_MPEG_TRIGGER_CHROMA_FMT_420	(0x00 << 27)
+#define VE_DEC_MPEG_TRIGGER_CHROMA_FMT_411	(0x01 << 27)
+#define VE_DEC_MPEG_TRIGGER_CHROMA_FMT_422	(0x02 << 27)
+#define VE_DEC_MPEG_TRIGGER_CHROMA_FMT_444	(0x03 << 27)
+#define VE_DEC_MPEG_TRIGGER_CHROMA_FMT_422T	(0x04 << 27)
+
+#define VE_DEC_MPEG_TRIGGER_MPEG1		(0x01 << 24)
+#define VE_DEC_MPEG_TRIGGER_MPEG2		(0x02 << 24)
+#define VE_DEC_MPEG_TRIGGER_JPEG		(0x03 << 24)
+#define VE_DEC_MPEG_TRIGGER_MPEG4		(0x04 << 24)
+#define VE_DEC_MPEG_TRIGGER_VP62		(0x05 << 24)
+
+#define VE_DEC_MPEG_TRIGGER_VP62_AC_GET_BITS	BIT(7)
+
+#define VE_DEC_MPEG_TRIGGER_STCD_VC1		(0x02 << 4)
+#define VE_DEC_MPEG_TRIGGER_STCD_MPEG2		(0x01 << 4)
+#define VE_DEC_MPEG_TRIGGER_STCD_AVC		(0x00 << 4)
+
+#define VE_DEC_MPEG_TRIGGER_HW_MPEG_VLD		(0x0f << 0)
+#define VE_DEC_MPEG_TRIGGER_HW_JPEG_VLD		(0x0e << 0)
+#define VE_DEC_MPEG_TRIGGER_HW_MB		(0x0d << 0)
+#define VE_DEC_MPEG_TRIGGER_HW_ROTATE		(0x0c << 0)
+#define VE_DEC_MPEG_TRIGGER_HW_VP6_VLD		(0x0b << 0)
+#define VE_DEC_MPEG_TRIGGER_HW_MAF		(0x0a << 0)
+#define VE_DEC_MPEG_TRIGGER_HW_STCD_END		(0x09 << 0)
+#define VE_DEC_MPEG_TRIGGER_HW_STCD_BEGIN	(0x08 << 0)
+#define VE_DEC_MPEG_TRIGGER_SW_MC		(0x07 << 0)
+#define VE_DEC_MPEG_TRIGGER_SW_IQ		(0x06 << 0)
+#define VE_DEC_MPEG_TRIGGER_SW_IDCT		(0x05 << 0)
+#define VE_DEC_MPEG_TRIGGER_SW_SCALE		(0x04 << 0)
+#define VE_DEC_MPEG_TRIGGER_SW_VP6		(0x03 << 0)
+#define VE_DEC_MPEG_TRIGGER_SW_VP62_AC_GET_BITS	(0x02 << 0)
+
+#define VE_DEC_MPEG_STATUS			(VE_ENGINE_DEC_MPEG + 0x1c)
+
+#define VE_DEC_MPEG_STATUS_START_DETECT_BUSY	BIT(27)
+#define VE_DEC_MPEG_STATUS_VP6_BIT		BIT(26)
+#define VE_DEC_MPEG_STATUS_VP6_BIT_BUSY		BIT(25)
+#define VE_DEC_MPEG_STATUS_MAF_BUSY		BIT(23)
+#define VE_DEC_MPEG_STATUS_VP6_MVP_BUSY		BIT(22)
+#define VE_DEC_MPEG_STATUS_JPEG_BIT_END		BIT(21)
+#define VE_DEC_MPEG_STATUS_JPEG_RESTART_ERROR	BIT(20)
+#define VE_DEC_MPEG_STATUS_JPEG_MARKER		BIT(19)
+#define VE_DEC_MPEG_STATUS_ROTATE_BUSY		BIT(18)
+#define VE_DEC_MPEG_STATUS_DEBLOCKING_BUSY	BIT(17)
+#define VE_DEC_MPEG_STATUS_SCALE_DOWN_BUSY	BIT(16)
+#define VE_DEC_MPEG_STATUS_IQIS_BUF_EMPTY	BIT(15)
+#define VE_DEC_MPEG_STATUS_IDCT_BUF_EMPTY	BIT(14)
+#define VE_DEC_MPEG_STATUS_VE_BUSY		BIT(13)
+#define VE_DEC_MPEG_STATUS_MC_BUSY		BIT(12)
+#define VE_DEC_MPEG_STATUS_IDCT_BUSY		BIT(11)
+#define VE_DEC_MPEG_STATUS_IQIS_BUSY		BIT(10)
+#define VE_DEC_MPEG_STATUS_DCAC_BUSY		BIT(9)
+#define VE_DEC_MPEG_STATUS_VLD_BUSY		BIT(8)
+#define VE_DEC_MPEG_STATUS_ROTATE_SUCCESS	BIT(3)
+#define VE_DEC_MPEG_STATUS_VLD_DATA_REQ		BIT(2)
+#define VE_DEC_MPEG_STATUS_ERROR		BIT(1)
+#define VE_DEC_MPEG_STATUS_SUCCESS		BIT(0)
+
+#define VE_DEC_MPEG_STATUS_CHECK_MASK \
+	(VE_DEC_MPEG_STATUS_SUCCESS | VE_DEC_MPEG_STATUS_ERROR | \
+	 VE_DEC_MPEG_STATUS_VLD_DATA_REQ)
+#define VE_DEC_MPEG_STATUS_CHECK_ERROR \
+	(VE_DEC_MPEG_STATUS_ERROR | VE_DEC_MPEG_STATUS_VLD_DATA_REQ )
+
+#define VE_DEC_MPEG_VLD_ADDR			(VE_ENGINE_DEC_MPEG + 0x28)
+
+#define VE_DEC_MPEG_VLD_ADDR_FIRST_PIC_DATA	BIT(30)
+#define VE_DEC_MPEG_VLD_ADDR_LAST_PIC_DATA	BIT(29)
+#define VE_DEC_MPEG_VLD_ADDR_VALID_PIC_DATA	BIT(28)
+#define VE_DEC_MPEG_VLD_ADDR_BASE(a) \
+	((a) & GENMASK(27, 4)) | (((a) >> 28) & GENMASK(3, 0))
+
+#define VE_DEC_MPEG_VLD_OFFSET			(VE_ENGINE_DEC_MPEG + 0x2c)
+#define VE_DEC_MPEG_VLD_LEN			(VE_ENGINE_DEC_MPEG + 0x30)
+#define VE_DEC_MPEG_VLD_END			(VE_ENGINE_DEC_MPEG + 0x34)
+
+#define VE_DEC_MPEG_REC_LUMA			(VE_ENGINE_DEC_MPEG + 0x48)
+#define VE_DEC_MPEG_REC_CHROMA			(VE_ENGINE_DEC_MPEG + 0x4c)
+#define VE_DEC_MPEG_FWD_REF_LUMA_ADDR		(VE_ENGINE_DEC_MPEG + 0x50)
+#define VE_DEC_MPEG_FWD_REF_CHROMA_ADDR		(VE_ENGINE_DEC_MPEG + 0x54)
+#define VE_DEC_MPEG_BWD_REF_LUMA_ADDR		(VE_ENGINE_DEC_MPEG + 0x58)
+#define VE_DEC_MPEG_BWD_REF_CHROMA_ADDR		(VE_ENGINE_DEC_MPEG + 0x5c)
+
+#define VE_DEC_MPEG_IQMINPUT			(VE_ENGINE_DEC_MPEG + 0x80)
+
+#define VE_DEC_MPEG_IQMINPUT_FLAG_INTRA		(0x01 << 14)
+#define VE_DEC_MPEG_IQMINPUT_FLAG_NON_INTRA	(0x00 << 14)
+#define VE_DEC_MPEG_IQMINPUT_WEIGHT(i, v) \
+	(((v) & GENMASK(7, 0)) | (((i) << 8) & GENMASK(13, 8)))
+
+#define VE_DEC_MPEG_ERROR			(VE_ENGINE_DEC_MPEG + 0xc4)
+#define VE_DEC_MPEG_CRTMBADDR			(VE_ENGINE_DEC_MPEG + 0xc8)
+#define VE_DEC_MPEG_ROT_LUMA			(VE_ENGINE_DEC_MPEG + 0xcc)
+#define VE_DEC_MPEG_ROT_CHROMA			(VE_ENGINE_DEC_MPEG + 0xd0)
+
+/*  FIXME: Legacy below. */
+
+#define VBV_SIZE                       (1024 * 1024)
 
 #define VE_H264_FRAME_SIZE		0x200
 #define VE_H264_PIC_HDR			0x204
