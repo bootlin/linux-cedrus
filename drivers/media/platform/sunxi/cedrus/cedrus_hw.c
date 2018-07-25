@@ -168,34 +168,32 @@ static irqreturn_t cedrus_irq(int irq, void *data)
 	return IRQ_WAKE_THREAD;
 }
 
-static void cedrus_hw_set_capabilities(struct cedrus_dev *dev)
-{
-	unsigned int engine_version;
-
-	engine_version = cedrus_read(dev, VE_VERSION);
-	engine_version >>= VE_VERSION_SHIFT;
-
-	if (engine_version >= 0x1667)
-		dev->capabilities |= CEDRUS_CAPABILITY_UNTILED;
-}
-
 int cedrus_hw_probe(struct cedrus_dev *dev)
 {
+	const struct cedrus_variant *variant;
 	struct resource *res;
 	int irq_dec;
 	int ret;
 
+	variant = of_device_get_match_data(dev->dev);
+	if (!variant)
+		return -EINVAL;
+
+	dev->capabilities = variant->capabilities;
+
 	irq_dec = platform_get_irq(dev->pdev, 0);
 	if (irq_dec <= 0) {
 		v4l2_err(&dev->v4l2_dev, "Failed to get IRQ\n");
-		return -ENXIO;
+
+		return irq_dec;
 	}
 	ret = devm_request_threaded_irq(dev->dev, irq_dec, cedrus_irq,
 					cedrus_bh, 0, dev_name(dev->dev),
 					dev);
 	if (ret) {
 		v4l2_err(&dev->v4l2_dev, "Failed to request IRQ\n");
-		return -ENXIO;
+
+		return ret;
 	}
 
 	/*
@@ -206,13 +204,15 @@ int cedrus_hw_probe(struct cedrus_dev *dev)
 
 	ret = of_reserved_mem_device_init(dev->dev);
 	if (ret && ret != -ENODEV) {
-		v4l2_err(&dev->v4l2_dev, "Failed to reserved memory\n");
-		return -ENODEV;
+		v4l2_err(&dev->v4l2_dev, "Failed to reserve memory\n");
+
+		return ret;
 	}
 
 	ret = sunxi_sram_claim(dev->dev);
 	if (ret) {
 		v4l2_err(&dev->v4l2_dev, "Failed to claim SRAM\n");
+
 		goto err_mem;
 	}
 
@@ -253,13 +253,14 @@ int cedrus_hw_probe(struct cedrus_dev *dev)
 	if (!dev->base) {
 		v4l2_err(&dev->v4l2_dev, "Failed to map registers\n");
 
-		ret = -EFAULT;
+		ret = -ENOMEM;
 		goto err_sram;
 	}
 
 	ret = clk_set_rate(dev->mod_clk, CEDRUS_CLOCK_RATE_DEFAULT);
 	if (ret) {
 		v4l2_err(&dev->v4l2_dev, "Failed to set clock rate\n");
+
 		goto err_sram;
 	}
 
@@ -267,7 +268,6 @@ int cedrus_hw_probe(struct cedrus_dev *dev)
 	if (ret) {
 		v4l2_err(&dev->v4l2_dev, "Failed to enable AHB clock\n");
 
-		ret = -EFAULT;
 		goto err_sram;
 	}
 
@@ -275,7 +275,6 @@ int cedrus_hw_probe(struct cedrus_dev *dev)
 	if (ret) {
 		v4l2_err(&dev->v4l2_dev, "Failed to enable MOD clock\n");
 
-		ret = -EFAULT;
 		goto err_ahb_clk;
 	}
 
@@ -283,7 +282,6 @@ int cedrus_hw_probe(struct cedrus_dev *dev)
 	if (ret) {
 		v4l2_err(&dev->v4l2_dev, "Failed to enable RAM clock\n");
 
-		ret = -EFAULT;
 		goto err_mod_clk;
 	}
 
@@ -291,11 +289,8 @@ int cedrus_hw_probe(struct cedrus_dev *dev)
 	if (ret) {
 		v4l2_err(&dev->v4l2_dev, "Failed to apply reset\n");
 
-		ret = -EFAULT;
 		goto err_ram_clk;
 	}
-
-	cedrus_hw_set_capabilities(dev);
 
 	return 0;
 

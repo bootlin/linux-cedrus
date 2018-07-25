@@ -147,7 +147,7 @@ static int cedrus_request_validate(struct media_request *req)
 		}
 	}
 
-	if (ctx == NULL)
+	if (!ctx)
 		return -EINVAL;
 
 	parent_hdl = &ctx->hdl;
@@ -159,15 +159,16 @@ static int cedrus_request_validate(struct media_request *req)
 	}
 
 	for (i = 0; i < CEDRUS_CONTROLS_COUNT; i++) {
-		if (cedrus_controls[i].codec == ctx->current_codec &&
-		    cedrus_controls[i].required) {
-			ctrl_test = v4l2_ctrl_request_hdl_ctrl_find(hdl,
-				cedrus_controls[i].id);
-			if (!ctrl_test) {
-				v4l2_err(&ctx->dev->v4l2_dev,
-					 "Missing required codec control\n");
-				return -EINVAL;
-			}
+		if (cedrus_controls[i].codec != ctx->current_codec ||
+		    !cedrus_controls[i].required)
+			continue;
+
+		ctrl_test = v4l2_ctrl_request_hdl_ctrl_find(hdl,
+			cedrus_controls[i].id);
+		if (!ctrl_test) {
+			v4l2_err(&ctx->dev->v4l2_dev,
+				 "Missing required codec control\n");
+			return -EINVAL;
 		}
 	}
 
@@ -368,8 +369,6 @@ static int cedrus_remove(struct platform_device *pdev)
 {
 	struct cedrus_dev *dev = platform_get_drvdata(pdev);
 
-	v4l2_info(&dev->v4l2_dev, "Removing " CEDRUS_NAME);
-
 	if (media_devnode_is_registered(dev->mdev.devnode)) {
 		media_device_unregister(&dev->mdev);
 		media_device_cleanup(&dev->mdev);
@@ -383,12 +382,47 @@ static int cedrus_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static const struct cedrus_variant sun4i_a10_cedrus_variant = {
+	/* No particular capability. */
+};
+
+static const struct cedrus_variant sun5i_a13_cedrus_variant = {
+	/* No particular capability. */
+};
+
+static const struct cedrus_variant sun7i_a20_cedrus_variant = {
+	/* No particular capability. */
+};
+
+static const struct cedrus_variant sun8i_a33_cedrus_variant = {
+	.capabilities	= CEDRUS_CAPABILITY_UNTILED;
+};
+
+static const struct cedrus_variant sun8i_h3_cedrus_variant = {
+	.capabilities	= CEDRUS_CAPABILITY_UNTILED;
+};
+
 static const struct of_device_id cedrus_dt_match[] = {
-	{ .compatible = "allwinner,sun4i-a10-video-engine" },
-	{ .compatible = "allwinner,sun5i-a13-video-engine" },
-	{ .compatible = "allwinner,sun7i-a20-video-engine" },
-	{ .compatible = "allwinner,sun8i-a33-video-engine" },
-	{ .compatible = "allwinner,sun8i-h3-video-engine" },
+	{
+		.compatible = "allwinner,sun4i-a10-video-engine",
+		.data = &sun4i_a10_cedrus_variant,
+	},
+	{
+		.compatible = "allwinner,sun5i-a13-video-engine",
+		.data = &sun5i_a13_cedrus_variant,
+	},
+	{
+		.compatible = "allwinner,sun7i-a20-video-engine",
+		.data = &sun7i_a20_cedrus_variant,
+	},
+	{
+		.compatible = "allwinner,sun8i-a33-video-engine",
+		.data = &sun8i_a33_cedrus_variant,
+	},
+	{
+		.compatible = "allwinner,sun8i-h3-video-engine",
+		.data = &sun8i_h3_cedrus_variant,
+	},
 	{ /* sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, cedrus_dt_match);
