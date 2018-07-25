@@ -10,6 +10,6 @@ config VIDEO_SUNXI
 
 if VIDEO_SUNXI
 
-source "drivers/media/platform/sunxi/cedrus/Kconfig"
+source "drivers/staging/media/sunxi/cedrus/Kconfig"
 
 endif
