@@ -72,6 +72,7 @@ void cedrus_device_run(void *priv)
 	if (!ctx->job_abort)
 		dev->dec_ops[ctx->current_codec]->setup(ctx, &run);
 
+unlock_complete:
 	spin_unlock_irqrestore(&ctx->dev->irq_lock, flags);
 
 	/* Complete request(s) controls if needed. */
