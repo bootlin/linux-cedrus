@@ -10,9 +10,6 @@
 #ifndef _CEDRUS_REGS_H_
 #define _CEDRUS_REGS_H_
 
-#define VE_ENGINE_DEC_MPEG	0x100
-#define VE_ENGINE_DEC_H264	0x200
-
 /*
  * Common acronyms used in register descriptions:
  * * VLD : Variable-Length Decoder
@@ -22,6 +19,9 @@
  * * STCD: Start Code Detect
  * * SDRT: Scale Down and Rotate
  */
+
+#define VE_ENGINE_DEC_MPEG			0x100
+#define VE_ENGINE_DEC_H264			0x200
 
 #define VE_MODE					0x00
 
