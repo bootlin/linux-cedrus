@@ -10,9 +10,6 @@
 #ifndef _CEDRUS_REGS_H_
 #define _CEDRUS_REGS_H_
 
-#define VE_ENGINE_DEC_MPEG	0x100
-#define VE_ENGINE_DEC_H264	0x200
-
 /*
  * Common acronyms used in register descriptions:
  * * VLD : Variable-Length Decoder
@@ -22,6 +19,9 @@
  * * STCD: Start Code Detect
  * * SDRT: Scale Down and Rotate
  */
+
+#define VE_ENGINE_DEC_MPEG			0x100
+#define VE_ENGINE_DEC_H264			0x200
 
 #define VE_MODE					0x00
 
@@ -107,7 +107,7 @@
 
 #define VE_DEC_MPEG_PICBOUNDSIZE		(VE_ENGINE_DEC_MPEG + 0x0c)
 
-#define VE_DEC_MPEG_PICBOUNDSIZE_WIDTH(w) 	(((w) << 16) & GENMASK(27, 16))
+#define VE_DEC_MPEG_PICBOUNDSIZE_WIDTH(w)	(((w) << 16) & GENMASK(27, 16))
 #define VE_DEC_MPEG_PICBOUNDSIZE_HEIGHT(h)	(((h) << 0) & GENMASK(11, 0))
 
 #define VE_DEC_MPEG_MBADDR			(VE_ENGINE_DEC_MPEG + 0x10)
@@ -199,7 +199,7 @@
 	(VE_DEC_MPEG_STATUS_SUCCESS | VE_DEC_MPEG_STATUS_ERROR | \
 	 VE_DEC_MPEG_STATUS_VLD_DATA_REQ)
 #define VE_DEC_MPEG_STATUS_CHECK_ERROR \
-	(VE_DEC_MPEG_STATUS_ERROR | VE_DEC_MPEG_STATUS_VLD_DATA_REQ )
+	(VE_DEC_MPEG_STATUS_ERROR | VE_DEC_MPEG_STATUS_VLD_DATA_REQ)
 
 #define VE_DEC_MPEG_VLD_ADDR			(VE_ENGINE_DEC_MPEG + 0x28)
 
@@ -207,7 +207,7 @@
 #define VE_DEC_MPEG_VLD_ADDR_LAST_PIC_DATA	BIT(29)
 #define VE_DEC_MPEG_VLD_ADDR_VALID_PIC_DATA	BIT(28)
 #define VE_DEC_MPEG_VLD_ADDR_BASE(a) \
-	((a) & GENMASK(27, 4)) | (((a) >> 28) & GENMASK(3, 0))
+	(((a) & GENMASK(27, 4)) | (((a) >> 28) & GENMASK(3, 0)))
 
 #define VE_DEC_MPEG_VLD_OFFSET			(VE_ENGINE_DEC_MPEG + 0x2c)
 #define VE_DEC_MPEG_VLD_LEN			(VE_ENGINE_DEC_MPEG + 0x30)

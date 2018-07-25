@@ -23,7 +23,7 @@
 
 #include <linux/platform_device.h>
 
-#define CEDRUS_NAME	"cedrus"
+#define CEDRUS_NAME			"cedrus"
 
 #define CEDRUS_CAPABILITY_UNTILED	BIT(0)
 
@@ -124,6 +124,10 @@ struct cedrus_dec_ops {
 	void (*trigger)(struct cedrus_ctx *ctx);
 };
 
+struct cedrus_variant {
+	unsigned int	capabilities;
+};
+
 struct cedrus_dev {
 	struct v4l2_device	v4l2_dev;
 	struct video_device	vfd;
@@ -169,7 +173,7 @@ static inline dma_addr_t cedrus_buf_addr(struct vb2_buffer *buf,
 {
 	dma_addr_t addr = vb2_dma_contig_plane_dma_addr(buf, 0);
 
-	return addr + (fmt ? (dma_addr_t) fmt->plane_fmt[0].bytesperline *
+	return addr + (fmt ? (dma_addr_t)fmt->plane_fmt[0].bytesperline *
 	       fmt->height * plane : 0);
 }
 

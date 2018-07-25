@@ -147,7 +147,7 @@ static int cedrus_request_validate(struct media_request *req)
 		}
 	}
 
-	if (ctx == NULL)
+	if (!ctx)
 		return -EINVAL;
 
 	parent_hdl = &ctx->hdl;
@@ -159,15 +159,16 @@ static int cedrus_request_validate(struct media_request *req)
 	}
 
 	for (i = 0; i < CEDRUS_CONTROLS_COUNT; i++) {
-		if (cedrus_controls[i].codec == ctx->current_codec &&
-		    cedrus_controls[i].required) {
-			ctrl_test = v4l2_ctrl_request_hdl_ctrl_find(hdl,
-				cedrus_controls[i].id);
-			if (!ctrl_test) {
-				v4l2_err(&ctx->dev->v4l2_dev,
-					 "Missing required codec control\n");
-				return -EINVAL;
-			}
+		if (cedrus_controls[i].codec != ctx->current_codec ||
+		    !cedrus_controls[i].required)
+			continue;
+
+		ctrl_test = v4l2_ctrl_request_hdl_ctrl_find(hdl,
+			cedrus_controls[i].id);
+		if (!ctrl_test) {
+			v4l2_err(&ctx->dev->v4l2_dev,
+				 "Missing required codec control\n");
+			return -EINVAL;
 		}
 	}
 
@@ -292,31 +293,11 @@ static int cedrus_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-	mutex_init(&dev->dev_mutex);
-	spin_lock_init(&dev->irq_lock);
-
-	dev->vfd = cedrus_video_device;
-	vfd = &dev->vfd;
-	vfd->lock = &dev->dev_mutex;
-	vfd->v4l2_dev = &dev->v4l2_dev;
-
-	dev->mdev.dev = &pdev->dev;
-	strlcpy(dev->mdev.model, CEDRUS_NAME, sizeof(dev->mdev.model));
-
-	media_device_init(&dev->mdev);
-	dev->mdev.ops = &cedrus_m2m_media_ops;
-	dev->v4l2_dev.mdev = &dev->mdev;
-	dev->pad[0].flags = MEDIA_PAD_FL_SINK;
-	dev->pad[1].flags = MEDIA_PAD_FL_SOURCE;
-
-	ret = media_entity_pads_init(&vfd->entity, 2, dev->pad);
-	if (ret) {
-		dev_err(&pdev->dev, "Failed to initialize media entity pads\n");
-		return ret;
-	}
-
 	dev->dec_ops[CEDRUS_CODEC_MPEG2] = &cedrus_dec_ops_mpeg2;
 	dev->dec_ops[CEDRUS_CODEC_H264] = &cedrus_dec_ops_h264;
+
+	mutex_init(&dev->dev_mutex);
+	spin_lock_init(&dev->irq_lock);
 
 	ret = v4l2_device_register(&pdev->dev, &dev->v4l2_dev);
 	if (ret) {
@@ -324,36 +305,59 @@ static int cedrus_probe(struct platform_device *pdev)
 		return ret;
 	}
 
+	dev->vfd = cedrus_video_device;
+	vfd = &dev->vfd;
+	vfd->lock = &dev->dev_mutex;
+	vfd->v4l2_dev = &dev->v4l2_dev;
+
 	ret = video_register_device(vfd, VFL_TYPE_GRABBER, 0);
 	if (ret) {
 		v4l2_err(&dev->v4l2_dev, "Failed to register video device\n");
 		goto err_v4l2;
 	}
 
-	video_set_drvdata(vfd, dev);
 	snprintf(vfd->name, sizeof(vfd->name), "%s", cedrus_video_device.name);
+	video_set_drvdata(vfd, dev);
 
 	v4l2_info(&dev->v4l2_dev,
 		  "Device registered as /dev/video%d\n", vfd->num);
-
-	platform_set_drvdata(pdev, dev);
 
 	dev->m2m_dev = v4l2_m2m_init(&cedrus_m2m_ops);
 	if (IS_ERR(dev->m2m_dev)) {
 		v4l2_err(&dev->v4l2_dev,
 			 "Failed to initialize V4L2 M2M device\n");
 		ret = PTR_ERR(dev->m2m_dev);
+
 		goto err_video;
+	}
+
+	dev->mdev.dev = &pdev->dev;
+	strlcpy(dev->mdev.model, CEDRUS_NAME, sizeof(dev->mdev.model));
+
+	media_device_init(&dev->mdev);
+	dev->mdev.ops = &cedrus_m2m_media_ops;
+	dev->v4l2_dev.mdev = &dev->mdev;
+
+	ret = v4l2_m2m_register_media_controller(dev->m2m_dev,
+			vfd, MEDIA_ENT_F_PROC_VIDEO_DECODER);
+	if (ret) {
+		v4l2_err(&dev->v4l2_dev,
+			 "Failed to initialize V4L2 M2M media controller\n");
+		goto err_m2m;
 	}
 
 	ret = media_device_register(&dev->mdev);
 	if (ret) {
 		v4l2_err(&dev->v4l2_dev, "Failed to register media device\n");
-		goto err_m2m;
+		goto err_m2m_mc;
 	}
+
+	platform_set_drvdata(pdev, dev);
 
 	return 0;
 
+err_m2m_mc:
+	v4l2_m2m_unregister_media_controller(dev->m2m_dev);
 err_m2m:
 	v4l2_m2m_release(dev->m2m_dev);
 err_video:
@@ -368,27 +372,62 @@ static int cedrus_remove(struct platform_device *pdev)
 {
 	struct cedrus_dev *dev = platform_get_drvdata(pdev);
 
-	v4l2_info(&dev->v4l2_dev, "Removing " CEDRUS_NAME);
-
 	if (media_devnode_is_registered(dev->mdev.devnode)) {
 		media_device_unregister(&dev->mdev);
+		v4l2_m2m_unregister_media_controller(dev->m2m_dev);
 		media_device_cleanup(&dev->mdev);
 	}
 
 	v4l2_m2m_release(dev->m2m_dev);
 	video_unregister_device(&dev->vfd);
 	v4l2_device_unregister(&dev->v4l2_dev);
+
 	cedrus_hw_remove(dev);
 
 	return 0;
 }
 
+static const struct cedrus_variant sun4i_a10_cedrus_variant = {
+	/* No particular capability. */
+};
+
+static const struct cedrus_variant sun5i_a13_cedrus_variant = {
+	/* No particular capability. */
+};
+
+static const struct cedrus_variant sun7i_a20_cedrus_variant = {
+	/* No particular capability. */
+};
+
+static const struct cedrus_variant sun8i_a33_cedrus_variant = {
+	.capabilities	= CEDRUS_CAPABILITY_UNTILED,
+};
+
+static const struct cedrus_variant sun8i_h3_cedrus_variant = {
+	.capabilities	= CEDRUS_CAPABILITY_UNTILED,
+};
+
 static const struct of_device_id cedrus_dt_match[] = {
-	{ .compatible = "allwinner,sun4i-a10-video-engine" },
-	{ .compatible = "allwinner,sun5i-a13-video-engine" },
-	{ .compatible = "allwinner,sun7i-a20-video-engine" },
-	{ .compatible = "allwinner,sun8i-a33-video-engine" },
-	{ .compatible = "allwinner,sun8i-h3-video-engine" },
+	{
+		.compatible = "allwinner,sun4i-a10-video-engine",
+		.data = &sun4i_a10_cedrus_variant,
+	},
+	{
+		.compatible = "allwinner,sun5i-a13-video-engine",
+		.data = &sun5i_a13_cedrus_variant,
+	},
+	{
+		.compatible = "allwinner,sun7i-a20-video-engine",
+		.data = &sun7i_a20_cedrus_variant,
+	},
+	{
+		.compatible = "allwinner,sun8i-a33-video-engine",
+		.data = &sun8i_a33_cedrus_variant,
+	},
+	{
+		.compatible = "allwinner,sun8i-h3-video-engine",
+		.data = &sun8i_h3_cedrus_variant,
+	},
 	{ /* sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, cedrus_dt_match);
