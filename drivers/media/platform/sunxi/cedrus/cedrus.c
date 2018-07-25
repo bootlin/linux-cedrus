@@ -364,11 +364,11 @@ static const struct cedrus_variant sun7i_a20_cedrus_variant = {
 };
 
 static const struct cedrus_variant sun8i_a33_cedrus_variant = {
-	.capabilities	= CEDRUS_CAPABILITY_UNTILED;
+	.capabilities	= CEDRUS_CAPABILITY_UNTILED,
 };
 
 static const struct cedrus_variant sun8i_h3_cedrus_variant = {
-	.capabilities	= CEDRUS_CAPABILITY_UNTILED;
+	.capabilities	= CEDRUS_CAPABILITY_UNTILED,
 };
 
 static const struct of_device_id cedrus_dt_match[] = {

@@ -91,7 +91,7 @@ struct cedrus_dec_ops {
 };
 
 struct cedrus_variant {
-	unsigned int capabilities;
+	unsigned int	capabilities;
 };
 
 struct cedrus_dev {
