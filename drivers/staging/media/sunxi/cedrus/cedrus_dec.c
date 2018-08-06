@@ -40,8 +40,6 @@ void cedrus_device_run(void *priv)
 
 	ctx->job_abort = 0;
 
-	spin_lock_irqsave(&ctx->dev->irq_lock, flags);
-
 	switch (ctx->src_fmt.pixelformat) {
 	case V4L2_PIX_FMT_MPEG2_SLICE:
 		run.mpeg2.slice_params = cedrus_find_control_data(ctx,
@@ -58,29 +56,24 @@ void cedrus_device_run(void *priv)
 	if (!ctx->job_abort)
 		dev->dec_ops[ctx->current_codec]->setup(ctx, &run);
 
-	spin_unlock_irqrestore(&ctx->dev->irq_lock, flags);
-
 	/* Complete request(s) controls if needed. */
 
 	if (src_req)
 		v4l2_ctrl_request_complete(src_req, &ctx->hdl);
 
-	spin_lock_irqsave(&ctx->dev->irq_lock, flags);
-
-	if (!ctx->job_abort) {
-		dev->dec_ops[ctx->current_codec]->trigger(ctx);
-	} else {
+	if (ctx->job_abort) {
 		v4l2_m2m_src_buf_remove(ctx->fh.m2m_ctx);
 		v4l2_m2m_buf_done(run.src, VB2_BUF_STATE_ERROR);
 
 		v4l2_m2m_dst_buf_remove(ctx->fh.m2m_ctx);
 		v4l2_m2m_buf_done(run.dst, VB2_BUF_STATE_ERROR);
+
+		v4l2_m2m_job_finish(ctx->dev->m2m_dev, ctx->fh.m2m_ctx);
+
+		return;
 	}
 
-	spin_unlock_irqrestore(&ctx->dev->irq_lock, flags);
-
-	if (ctx->job_abort)
-		v4l2_m2m_job_finish(ctx->dev->m2m_dev, ctx->fh.m2m_ctx);
+	dev->dec_ops[ctx->current_codec]->trigger(ctx);
 }
 
 void cedrus_job_abort(void *priv)
@@ -99,8 +92,6 @@ void cedrus_job_abort(void *priv)
 	 * disabled.
 	 */
 
-	spin_lock_irqsave(&ctx->dev->irq_lock, flags);
-
 	src_buf = v4l2_m2m_src_buf_remove(ctx->fh.m2m_ctx);
 	if (src_buf)
 		v4l2_m2m_buf_done(src_buf, VB2_BUF_STATE_ERROR);
@@ -108,8 +99,6 @@ void cedrus_job_abort(void *priv)
 	dst_buf = v4l2_m2m_dst_buf_remove(ctx->fh.m2m_ctx);
 	if (dst_buf)
 		v4l2_m2m_buf_done(dst_buf, VB2_BUF_STATE_ERROR);
-
-	spin_unlock_irqrestore(&ctx->dev->irq_lock, flags);
 
 	v4l2_m2m_job_finish(ctx->dev->m2m_dev, ctx->fh.m2m_ctx);
 }
