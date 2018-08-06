@@ -118,14 +118,14 @@ static int cedrus_request_validate(struct media_request *req)
 	}
 
 	if (!ctx)
-		return -EINVAL;
+		return -ENOENT;
 
 	parent_hdl = &ctx->hdl;
 
 	hdl = v4l2_ctrl_request_hdl_find(req, parent_hdl);
 	if (!hdl) {
 		v4l2_err(&ctx->dev->v4l2_dev, "Missing codec control(s)\n");
-		return -EINVAL;
+		return -ENOENT;
 	}
 
 	for (i = 0; i < CEDRUS_CONTROLS_COUNT; i++) {
@@ -138,7 +138,7 @@ static int cedrus_request_validate(struct media_request *req)
 		if (!ctrl_test) {
 			v4l2_err(&ctx->dev->v4l2_dev,
 				 "Missing required codec control\n");
-			return -EINVAL;
+			return -ENOENT;
 		}
 	}
 
@@ -207,7 +207,6 @@ static int cedrus_release(struct file *file)
 	kfree(ctx->ctrls);
 
 	v4l2_fh_exit(&ctx->fh);
-	v4l2_fh_exit(&ctx->fh);
 
 	kfree(ctx);
 
@@ -232,6 +231,7 @@ static const struct video_device cedrus_video_device = {
 	.ioctl_ops	= &cedrus_ioctl_ops,
 	.minor		= -1,
 	.release	= video_device_release_empty,
+	.device_caps	= V4L2_CAP_VIDEO_M2M_MPLANE | V4L2_CAP_STREAMING,
 };
 
 static const struct v4l2_m2m_ops cedrus_m2m_ops = {
