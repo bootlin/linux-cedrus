@@ -176,9 +176,6 @@ static void cedrus_mpeg2_setup(struct cedrus_ctx *ctx, struct cedrus_run *run)
 	cedrus_write(dev, VE_DEC_MPEG_REC_LUMA, dst_luma_addr);
 	cedrus_write(dev, VE_DEC_MPEG_REC_CHROMA, dst_chroma_addr);
 
-	cedrus_write(dev, VE_DEC_MPEG_ROT_LUMA, dst_luma_addr);
-	cedrus_write(dev, VE_DEC_MPEG_ROT_CHROMA, dst_chroma_addr);
-
 	/* Source offset and length in bits. */
 
 	cedrus_write(dev, VE_DEC_MPEG_VLD_OFFSET, slice_params->slice_pos);
@@ -213,7 +210,6 @@ static void cedrus_mpeg2_setup(struct cedrus_ctx *ctx, struct cedrus_run *run)
 	/* Enable appropriate interruptions and components. */
 
 	reg = VE_DEC_MPEG_CTRL_IRQ_MASK | VE_DEC_MPEG_CTRL_MC_NO_WRITEBACK |
-	      VE_DEC_MPEG_CTRL_ROTATE_SCALE_OUT_EN |
 	      VE_DEC_MPEG_CTRL_MC_CACHE_EN;
 
 	cedrus_write(dev, VE_DEC_MPEG_CTRL, reg);
