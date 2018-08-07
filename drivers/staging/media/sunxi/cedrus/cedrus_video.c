@@ -104,27 +104,30 @@ static void cedrus_prepare_plane_format(struct cedrus_format *fmt,
 		/* 32-aligned stride. */
 		bytesperline = ALIGN(width, 32);
 
-		/* 32-aligned (luma) height. */
+		/* 32-aligned height. */
 		height = ALIGN(height, 32);
 
 		if (i == 0)
-			/* 32-aligned luma size. */
+			/* Luma plane size. */
 			sizeimage = bytesperline * height;
 		else if (i == 1)
-			/* 32-aligned chroma size with 2x2 sub-sampling. */
-			sizeimage = bytesperline * ALIGN(height / 2, 32);
+			/* Chroma plane size. */
+			sizeimage = bytesperline * height / 2;
 
 		break;
 
 	case V4L2_PIX_FMT_NV12:
-		/* 32-aligned stride. */
-		bytesperline = ALIGN(width, 32);
+		/* 16-aligned stride. */
+		bytesperline = ALIGN(width, 16);
+
+		/* 16-aligned height. */
+		height = ALIGN(height, 16);
 
 		if (i == 0)
-			/* Regular luma size. */
+			/* Luma plane size. */
 			sizeimage = bytesperline * height;
 		else if (i == 1)
-			/* Regular chroma size with 2x2 sub-sampling. */
+			/* Chroma plane size. */
 			sizeimage = bytesperline * height / 2;
 
 		break;
