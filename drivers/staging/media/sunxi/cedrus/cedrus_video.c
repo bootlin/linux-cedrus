@@ -403,12 +403,17 @@ static void cedrus_queue_cleanup(struct vb2_queue *vq, u32 state)
 {
 	struct cedrus_ctx *ctx = vb2_get_drv_priv(vq);
 	struct vb2_v4l2_buffer *vbuf;
+	unsigned long flags;
 
 	for (;;) {
+		spin_lock_irqsave(&ctx->dev->irq_lock, flags);
+
 		if (V4L2_TYPE_IS_OUTPUT(vq->type))
 			vbuf = v4l2_m2m_src_buf_remove(ctx->fh.m2m_ctx);
 		else
 			vbuf = v4l2_m2m_dst_buf_remove(ctx->fh.m2m_ctx);
+
+		spin_unlock_irqrestore(&ctx->dev->irq_lock, flags);
 
 		if (!vbuf)
 			return;
@@ -495,7 +500,6 @@ static void cedrus_stop_streaming(struct vb2_queue *vq)
 {
 	struct cedrus_ctx *ctx = vb2_get_drv_priv(vq);
 	struct cedrus_dev *dev = ctx->dev;
-	unsigned long flags;
 
 	flush_scheduled_work();
 
