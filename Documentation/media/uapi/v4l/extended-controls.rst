@@ -1530,6 +1530,9 @@ enum v4l2_mpeg_video_h264_hierarchical_coding_type -
       - Structure with MPEG-2 picture metadata, merging relevant fields from
 	the picture header and picture coding extension parts of the bitstream.
     * - __u8
+      - ``quantiser_scale_code``
+      - Code used to determine the quantization scale to use for the IDCT.
+    * - __u8
       - ``backward_ref_index``
       - Index for the V4L2 buffer to use as backward reference, used with
 	B-coded and P-coded frames.
@@ -1547,13 +1550,13 @@ enum v4l2_mpeg_video_h264_hierarchical_coding_type -
     :stub-columns: 0
     :widths:       1 1 2
 
-    * - __u8
+    * - __u16
       - ``horizontal_size``
       - The width of the displayable part of the frame's luminance component.
-    * - __u8
+    * - __u16
       - ``vertical_size``
       - The height of the displayable part of the frame's luminance component.
-    * - __u8
+    * - __u32
       - ``vbv_buffer_size``
       - Used to calculate the required size of the video buffering verifier,
 	defined (in bits) as: 16 * 1024 * vbv_buffer_size.

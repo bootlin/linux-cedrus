@@ -1102,9 +1102,9 @@ enum v4l2_detect_md_mode {
 
 struct v4l2_mpeg2_sequence {
 	/* ISO/IEC 13818-2, ITU-T Rec. H.262: Sequence header */
-	__u8	horizontal_size;
-	__u8	vertical_size;
-	__u8	vbv_buffer_size;
+	__u16	horizontal_size;
+	__u16	vertical_size;
+	__u32	vbv_buffer_size;
 
 	/* ISO/IEC 13818-2, ITU-T Rec. H.262: Sequence extension */
 	__u8	profile_and_level_indication;
@@ -1136,6 +1136,9 @@ struct v4l2_ctrl_mpeg2_slice_params {
 
 	struct v4l2_mpeg2_sequence sequence;
 	struct v4l2_mpeg2_picture picture;
+
+	/* ISO/IEC 13818-2, ITU-T Rec. H.262: Slice */
+	__u8	quantiser_scale_code;
 
 	__u8	backward_ref_index;
 	__u8	forward_ref_index;
