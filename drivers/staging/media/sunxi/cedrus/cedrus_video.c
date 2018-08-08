@@ -39,7 +39,7 @@ static struct cedrus_format cedrus_formats[] = {
 		.num_buffers	= 1,
 	},
 	{
-		.pixelformat	= V4L2_PIX_FMT_MB32_NV12,
+		.pixelformat	= V4L2_PIX_FMT_SUNXI_TILED_NV12,
 		.directions	= CEDRUS_DECODE_DST,
 		.num_planes	= 2,
 		.num_buffers	= 1,
@@ -100,7 +100,7 @@ static void cedrus_prepare_plane_format(struct cedrus_format *fmt,
 		bytesperline = 0;
 		break;
 
-	case V4L2_PIX_FMT_MB32_NV12:
+	case V4L2_PIX_FMT_SUNXI_TILED_NV12:
 		/* 32-aligned stride. */
 		bytesperline = ALIGN(width, 32);
 

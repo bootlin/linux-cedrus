@@ -67,12 +67,10 @@ void cedrus_dst_format_set(struct cedrus_dev *dev,
 	case V4L2_PIX_FMT_NV12:
 		chroma_size = ALIGN(width, 16) * ALIGN(height, 16) / 2;
 
-		reg = VE_PRIMARY_OUT_FMT_NV12 |
-		      VE_SECONDARY_SPECIAL_OUT_FMT_NV12;
+		reg = VE_PRIMARY_OUT_FMT_NV12;
 		cedrus_write(dev, VE_PRIMARY_OUT_FMT, reg);
 
-		reg = VE_CHROMA_BUF_LEN_SDRT(chroma_size / 2) |
-		      VE_SECONDARY_OUT_FMT_SPECIAL;
+		reg = VE_CHROMA_BUF_LEN_SDRT(chroma_size / 2);
 		cedrus_write(dev, VE_CHROMA_BUF_LEN, reg);
 
 		reg = chroma_size / 2;
@@ -83,12 +81,12 @@ void cedrus_dst_format_set(struct cedrus_dev *dev,
 		cedrus_write(dev, VE_PRIMARY_FB_LINE_STRIDE, reg);
 
 		break;
-	case V4L2_PIX_FMT_MB32_NV12:
+	case V4L2_PIX_FMT_SUNXI_TILED_NV12:
 	default:
-		reg = VE_PRIMARY_OUT_FMT_MB32_NV12;
+		reg = VE_PRIMARY_OUT_FMT_TILED_32_NV12;
 		cedrus_write(dev, VE_PRIMARY_OUT_FMT, reg);
 
-		reg = VE_SECONDARY_OUT_FMT_MB32_NV12;
+		reg = VE_SECONDARY_OUT_FMT_TILED_32_NV12;
 		cedrus_write(dev, VE_CHROMA_BUF_LEN, reg);
 
 		break;
