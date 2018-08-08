@@ -844,8 +844,8 @@ const char *v4l2_ctrl_get_name(u32 id)
 	case V4L2_CID_MPEG_VIDEO_MV_V_SEARCH_RANGE:		return "Vertical MV Search Range";
 	case V4L2_CID_MPEG_VIDEO_REPEAT_SEQ_HEADER:		return "Repeat Sequence Header";
 	case V4L2_CID_MPEG_VIDEO_FORCE_KEY_FRAME:		return "Force Key Frame";
-	case V4L2_CID_MPEG_VIDEO_MPEG2_SLICE_PARAMS:		return "MPEG2 Slice Header";
-	case V4L2_CID_MPEG_VIDEO_MPEG2_QUANTIZATION:		return "MPEG2 Quantization Matrices";
+	case V4L2_CID_MPEG_VIDEO_MPEG2_SLICE_PARAMS:		return "MPEG-2 Slice Parameters";
+	case V4L2_CID_MPEG_VIDEO_MPEG2_QUANTIZATION:		return "MPEG-2 Quantization Matrices";
 
 	/* VPX controls */
 	case V4L2_CID_MPEG_VIDEO_VPX_NUM_PARTITIONS:		return "VPX Number of Partitions";
@@ -1624,7 +1624,16 @@ static int std_validate(const struct v4l2_ctrl *ctrl, u32 idx,
 	case V4L2_CTRL_TYPE_MPEG2_SLICE_PARAMS:
 		p_mpeg2_slice_params = ptr.p;
 
-		switch (p_mpeg2_slice_params->intra_dc_precision) {
+		switch (p_mpeg2_slice_params->sequence.chroma_format) {
+		case 1: /* 4:2:0 */
+		case 2: /* 4:2:2 */
+		case 3: /* 4:4:4 */
+			break;
+		default:
+			return -EINVAL;
+		}
+
+		switch (p_mpeg2_slice_params->picture.intra_dc_precision) {
 		case 0: /* 8 bits */
 		case 1: /* 9 bits */
 		case 11: /* 11 bits */
@@ -1633,7 +1642,7 @@ static int std_validate(const struct v4l2_ctrl *ctrl, u32 idx,
 			return -EINVAL;
 		}
 
-		switch (p_mpeg2_slice_params->picture_structure) {
+		switch (p_mpeg2_slice_params->picture.picture_structure) {
 		case 1: /* interlaced top field */
 		case 2: /* interlaced bottom field */
 		case 3: /* progressive */
@@ -1642,17 +1651,17 @@ static int std_validate(const struct v4l2_ctrl *ctrl, u32 idx,
 			return -EINVAL;
 		}
 
-		switch (p_mpeg2_slice_params->slice_type) {
-		case V4L2_MPEG2_SLICE_TYPE_I:
-		case V4L2_MPEG2_SLICE_TYPE_P:
-		case V4L2_MPEG2_SLICE_TYPE_B:
+		switch (p_mpeg2_slice_params->picture.picture_coding_type) {
+		case V4L2_MPEG2_PICTURE_CODING_TYPE_I:
+		case V4L2_MPEG2_PICTURE_CODING_TYPE_P:
+		case V4L2_MPEG2_PICTURE_CODING_TYPE_B:
 			break;
 		default:
 			return -EINVAL;
 		}
 
-		if (p_mpeg2_slice_params->backward_ref_index > VIDEO_MAX_FRAME ||
-		    p_mpeg2_slice_params->forward_ref_index > VIDEO_MAX_FRAME)
+		if (p_mpeg2_slice_params->backward_ref_index >= VIDEO_MAX_FRAME ||
+		    p_mpeg2_slice_params->forward_ref_index >= VIDEO_MAX_FRAME)
 			return -EINVAL;
 
 		return 0;
