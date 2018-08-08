@@ -501,8 +501,6 @@ static void cedrus_stop_streaming(struct vb2_queue *vq)
 	struct cedrus_ctx *ctx = vb2_get_drv_priv(vq);
 	struct cedrus_dev *dev = ctx->dev;
 
-	flush_scheduled_work();
-
 	if (V4L2_TYPE_IS_OUTPUT(vq->type) &&
 	    dev->dec_ops[ctx->current_codec]->stop)
 		dev->dec_ops[ctx->current_codec]->stop(ctx);
