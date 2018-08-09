@@ -67,6 +67,7 @@ void cedrus_device_run(void *priv)
 
 	default:
 		ctx->job_abort = 1;
+		break;
 	}
 
 	if (!ctx->job_abort)

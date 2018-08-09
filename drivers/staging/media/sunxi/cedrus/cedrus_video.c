@@ -45,7 +45,7 @@ static struct cedrus_format cedrus_formats[] = {
 		.num_buffers	= 1,
 	},
 	{
-		.pixelformat	= V4L2_PIX_FMT_MB32_NV12,
+		.pixelformat	= V4L2_PIX_FMT_SUNXI_TILED_NV12,
 		.directions	= CEDRUS_DECODE_DST,
 		.num_planes	= 2,
 		.num_buffers	= 1,
@@ -107,31 +107,34 @@ static void cedrus_prepare_plane_format(struct cedrus_format *fmt,
 		bytesperline = 0;
 		break;
 
-	case V4L2_PIX_FMT_MB32_NV12:
+	case V4L2_PIX_FMT_SUNXI_TILED_NV12:
 		/* 32-aligned stride. */
 		bytesperline = ALIGN(width, 32);
 
-		/* 32-aligned (luma) height. */
+		/* 32-aligned height. */
 		height = ALIGN(height, 32);
 
 		if (i == 0)
-			/* 32-aligned luma size. */
+			/* Luma plane size. */
 			sizeimage = bytesperline * height;
 		else if (i == 1)
-			/* 32-aligned chroma size with 2x2 sub-sampling. */
-			sizeimage = bytesperline * ALIGN(height / 2, 32);
+			/* Chroma plane size. */
+			sizeimage = bytesperline * height / 2;
 
 		break;
 
 	case V4L2_PIX_FMT_NV12:
-		/* 32-aligned stride. */
-		bytesperline = ALIGN(width, 32);
+		/* 16-aligned stride. */
+		bytesperline = ALIGN(width, 16);
+
+		/* 16-aligned height. */
+		height = ALIGN(height, 16);
 
 		if (i == 0)
-			/* Regular luma size. */
+			/* Luma plane size. */
 			sizeimage = bytesperline * height;
 		else if (i == 1)
-			/* Regular chroma size with 2x2 sub-sampling. */
+			/* Chroma plane size. */
 			sizeimage = bytesperline * height / 2;
 
 		break;
@@ -163,9 +166,6 @@ static int cedrus_querycap(struct file *file, void *priv,
 	strncpy(cap->card, CEDRUS_NAME, sizeof(cap->card) - 1);
 	snprintf(cap->bus_info, sizeof(cap->bus_info),
 		 "platform:%s", CEDRUS_NAME);
-
-	cap->device_caps = V4L2_CAP_VIDEO_M2M_MPLANE | V4L2_CAP_STREAMING;
-	cap->capabilities = cap->device_caps | V4L2_CAP_DEVICE_CAPS;
 
 	return 0;
 }
@@ -406,6 +406,31 @@ static int cedrus_queue_setup(struct vb2_queue *vq, unsigned int *nbufs,
 	return 0;
 }
 
+static void cedrus_queue_cleanup(struct vb2_queue *vq, u32 state)
+{
+	struct cedrus_ctx *ctx = vb2_get_drv_priv(vq);
+	struct vb2_v4l2_buffer *vbuf;
+	unsigned long flags;
+
+	for (;;) {
+		spin_lock_irqsave(&ctx->dev->irq_lock, flags);
+
+		if (V4L2_TYPE_IS_OUTPUT(vq->type))
+			vbuf = v4l2_m2m_src_buf_remove(ctx->fh.m2m_ctx);
+		else
+			vbuf = v4l2_m2m_dst_buf_remove(ctx->fh.m2m_ctx);
+
+		spin_unlock_irqrestore(&ctx->dev->irq_lock, flags);
+
+		if (!vbuf)
+			return;
+
+		v4l2_ctrl_request_complete(vbuf->vb2_buf.req_obj.req,
+					   &ctx->hdl);
+		v4l2_m2m_buf_done(vbuf, state);
+	}
+}
+
 static int cedrus_buf_init(struct vb2_buffer *vb)
 {
 	struct vb2_queue *vq = vb->vb2_queue;
@@ -454,9 +479,9 @@ static int cedrus_buf_prepare(struct vb2_buffer *vb)
 	return 0;
 }
 
-static int cedrus_start_streaming(struct vb2_queue *q, unsigned int count)
+static int cedrus_start_streaming(struct vb2_queue *vq, unsigned int count)
 {
-	struct cedrus_ctx *ctx = vb2_get_drv_priv(q);
+	struct cedrus_ctx *ctx = vb2_get_drv_priv(vq);
 	struct cedrus_dev *dev = ctx->dev;
 	int ret = 0;
 
@@ -471,43 +496,26 @@ static int cedrus_start_streaming(struct vb2_queue *q, unsigned int count)
 		return -EINVAL;
 	}
 
-	if (V4L2_TYPE_IS_OUTPUT(q->type) &&
+	if (V4L2_TYPE_IS_OUTPUT(vq->type) &&
 	    dev->dec_ops[ctx->current_codec]->start)
 		ret = dev->dec_ops[ctx->current_codec]->start(ctx);
+
+	if (ret)
+		cedrus_queue_cleanup(vq, VB2_BUF_STATE_QUEUED);
 
 	return ret;
 }
 
-static void cedrus_stop_streaming(struct vb2_queue *q)
+static void cedrus_stop_streaming(struct vb2_queue *vq)
 {
-	struct cedrus_ctx *ctx = vb2_get_drv_priv(q);
+	struct cedrus_ctx *ctx = vb2_get_drv_priv(vq);
 	struct cedrus_dev *dev = ctx->dev;
-	struct vb2_v4l2_buffer *vbuf;
-	unsigned long flags;
 
-	flush_scheduled_work();
-
-	if (V4L2_TYPE_IS_OUTPUT(q->type) &&
+	if (V4L2_TYPE_IS_OUTPUT(vq->type) &&
 	    dev->dec_ops[ctx->current_codec]->stop)
 		dev->dec_ops[ctx->current_codec]->stop(ctx);
 
-	for (;;) {
-		spin_lock_irqsave(&ctx->dev->irq_lock, flags);
-
-		if (V4L2_TYPE_IS_OUTPUT(q->type))
-			vbuf = v4l2_m2m_src_buf_remove(ctx->fh.m2m_ctx);
-		else
-			vbuf = v4l2_m2m_dst_buf_remove(ctx->fh.m2m_ctx);
-
-		spin_unlock_irqrestore(&ctx->dev->irq_lock, flags);
-
-		if (!vbuf)
-			return;
-
-		v4l2_ctrl_request_complete(vbuf->vb2_buf.req_obj.req,
-					   &ctx->hdl);
-		v4l2_m2m_buf_done(vbuf, VB2_BUF_STATE_ERROR);
-	}
+	cedrus_queue_cleanup(vq, VB2_BUF_STATE_ERROR);
 }
 
 static void cedrus_buf_queue(struct vb2_buffer *vb)
@@ -548,7 +556,6 @@ int cedrus_queue_init(void *priv, struct vb2_queue *src_vq,
 	src_vq->io_modes = VB2_MMAP | VB2_DMABUF;
 	src_vq->drv_priv = ctx;
 	src_vq->buf_struct_size = sizeof(struct cedrus_buffer);
-	src_vq->allow_zero_bytesused = 1;
 	src_vq->min_buffers_needed = 1;
 	src_vq->ops = &cedrus_qops;
 	src_vq->mem_ops = &vb2_dma_contig_memops;
@@ -564,7 +571,6 @@ int cedrus_queue_init(void *priv, struct vb2_queue *src_vq,
 	dst_vq->io_modes = VB2_MMAP | VB2_DMABUF;
 	dst_vq->drv_priv = ctx;
 	dst_vq->buf_struct_size = sizeof(struct cedrus_buffer);
-	dst_vq->allow_zero_bytesused = 1;
 	dst_vq->min_buffers_needed = 1;
 	dst_vq->ops = &cedrus_qops;
 	dst_vq->mem_ops = &vb2_dma_contig_memops;

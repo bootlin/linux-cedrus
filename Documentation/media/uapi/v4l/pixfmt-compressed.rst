@@ -64,7 +64,16 @@ Compressed Formats
 
       - ``V4L2_PIX_FMT_MPEG2_SLICE``
       - 'MG2S'
-      - MPEG2 parsed slice data, as extracted from the MPEG2 bitstream.
+      - MPEG-2 parsed slice data, as extracted from the MPEG-2 bitstream.
+	This format is adapted for stateless video decoders that implement a
+	MPEG-2 pipeline (using the Memory to Memory and Media Request APIs).
+	Metadata associated with the frame to decode is required to be passed
+	through the ``V4L2_CID_MPEG_VIDEO_MPEG2_SLICE_PARAMS`` control and
+	quantization matrices can optionally be specified through the
+	``V4L2_CID_MPEG_VIDEO_MPEG2_QUANTIZATION`` control.
+	See the :ref:`associated Codec Control IDs <v4l2-mpeg-mpeg2>`.
+	Buffers associated with this pixel format must contain the appropriate
+	number of macroblocks to decode a full corresponding frame.
     * .. _V4L2-PIX-FMT-MPEG4:
 
       - ``V4L2_PIX_FMT_MPEG4``
