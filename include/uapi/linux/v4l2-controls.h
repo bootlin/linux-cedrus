@@ -707,6 +707,9 @@ enum v4l2_cid_mpeg_video_hevc_size_of_length_field {
 #define V4L2_CID_MPEG_VIDEO_HEVC_HIER_CODING_L6_BR	(V4L2_CID_MPEG_BASE + 642)
 #define V4L2_CID_MPEG_VIDEO_REF_NUMBER_FOR_PFRAMES	(V4L2_CID_MPEG_BASE + 643)
 #define V4L2_CID_MPEG_VIDEO_PREPEND_SPSPPS_TO_IDR	(V4L2_CID_MPEG_BASE + 644)
+#define V4L2_CID_MPEG_VIDEO_HEVC_SPS			(V4L2_CID_MPEG_BASE + 645)
+#define V4L2_CID_MPEG_VIDEO_HEVC_PPS			(V4L2_CID_MPEG_BASE + 646)
+#define V4L2_CID_MPEG_VIDEO_HEVC_SLICE_PARAMS		(V4L2_CID_MPEG_BASE + 647)
 
 /*  MPEG-class control IDs specific to the CX2341x driver as defined by V4L2 */
 #define V4L2_CID_MPEG_CX2341X_BASE				(V4L2_CTRL_CLASS_MPEG | 0x1000)
@@ -1249,6 +1252,7 @@ struct v4l2_h264_pred_weight_table {
 #define V4L2_H264_SLICE_TYPE_I				2
 #define V4L2_H264_SLICE_TYPE_SP				3
 #define V4L2_H264_SLICE_TYPE_SI				4
+// FIXME: 5 and above
 
 #define V4L2_H264_SLICE_FLAG_FIELD_PIC			0x01
 #define V4L2_H264_SLICE_FLAG_BOTTOM_FIELD		0x02
@@ -1321,6 +1325,124 @@ struct v4l2_ctrl_h264_decode_param {
 	__u8 ref_pic_list_b0[32];
 	__u8 ref_pic_list_b1[32];
 	struct v4l2_h264_dpb_entry dpb[16];
+};
+
+#define V4L2_HEVC_SLICE_TYPE_B	0
+#define V4L2_HEVC_SLICE_TYPE_P	1
+#define V4L2_HEVC_SLICE_TYPE_I	2
+
+struct v4l2_ctrl_hevc_sps {
+	__u8	chroma_format_idc;
+	__u8	separate_colour_plane_flag : 1;
+	__u16	pic_width_in_luma_samples;
+	__u16	pic_height_in_luma_samples;
+	__u8	bit_depth_luma_minus8;
+	__u8	bit_depth_chroma_minus8;
+	__u8	log2_max_pic_order_cnt_lsb_minus4;
+	__u8	sps_max_dec_pic_buffering_minus1;
+	__u8	sps_max_num_reorder_pics;
+	__u8	sps_max_latency_increase_plus1;
+	__u8	log2_min_luma_coding_block_size_minus3;
+	__u8	log2_diff_max_min_luma_coding_block_size;
+	__u8	log2_min_luma_transform_block_size_minus2;
+	__u8	log2_diff_max_min_luma_transform_block_size;
+	__u8	max_transform_hierarchy_depth_inter;
+	__u8	max_transform_hierarchy_depth_intra;
+	__u8	scaling_list_enabled_flag : 1;
+	__u8	amp_enabled_flag : 1;
+	__u8	sample_adaptive_offset_enabled_flag : 1;
+	__u8	pcm_enabled_flag : 1;
+	__u8	pcm_sample_bit_depth_luma_minus1;
+	__u8	pcm_sample_bit_depth_chroma_minus1;
+	__u8	log2_min_pcm_luma_coding_block_size_minus3;
+	__u8	log2_diff_max_min_pcm_luma_coding_block_size;
+	__u8	pcm_loop_filter_disabled_flag : 1;
+	__u8	num_short_term_ref_pic_sets;
+	__u8	long_term_ref_pics_present_flag : 1;
+	__u8	num_long_term_ref_pic_sps;
+	__u8	sps_temporal_mvp_enabled_flag : 1;
+	__u8	strong_intra_smoothing_enabled_flag : 1;
+};
+
+struct v4l2_ctrl_hevc_pps {
+	__u8	dependent_slice_segment_flag : 1;
+	__u8	output_flag_present_flag : 1;
+	__u8	num_extra_slice_header_bits;
+	__u8	sign_data_hiding_enabled_flag : 1;
+	__u8	cabac_init_present_flag : 1;
+	__s8	init_qp_minus26;
+	__u8	constrained_intra_pred_flag : 1;
+	__u8	transform_skip_enabled_flag : 1;
+	__u8	cu_qp_delta_enabled_flag : 1;
+	__u8	diff_cu_qp_delta_depth;
+	__s8	pps_cb_qp_offset;
+	__s8	pps_cr_qp_offset;
+	__u8	pps_slice_chroma_qp_offsets_present_flag : 1;
+	__u8	weighted_pred_flag : 1;
+	__u8	weighted_bipred_flag : 1;
+	__u8	transquant_bypass_enabled_flag : 1;
+	__u8	tiles_enabled_flag : 1;
+	__u8	entropy_coding_sync_enabled_flag : 1;
+	__u8	num_tile_columns_minus1;
+	__u8	num_tile_rows_minus1;
+	__u8	column_width_minus1[20];
+	__u8	row_height_minus1[22];
+	__u8	loop_filter_across_tiles_enabled_flag : 1;
+	__u8	pps_loop_filter_across_slices_enabled_flag : 1;
+	__u8	deblocking_filter_override_enabled_flag : 1;
+	__u8	pps_disable_deblocking_filter_flag : 1;
+	__s8	pps_beta_offset_div2;
+	__s8	pps_tc_offset_div2;
+	__u8	lists_modification_present_flag : 1;
+	__u8	log2_parallel_merge_level_minus2;
+};
+
+struct v4l2_hevc_pred_weight_table {
+	__u8	luma_log2_weight_denom;
+	__u8	delta_chroma_log2_weight_denom; // FIXME: maybe directly chroma_log2_weight_denom instead
+
+	// TODO: All the other fields from pred_weight_table, needed for P/B frames
+	// consider whether to keep chroma_offset_l0 / chroma_offset_l1 as-is instead of
+	// delta_chroma_offset.
+};
+
+struct v4l2_ctrl_hevc_slice_params {
+	__u32	bit_size;
+	__u32	data_bit_offset;
+
+	__u8	nal_unit_type;
+	__u8	nuh_temporal_id_plus1;
+
+	// TODO: picture type
+	__u8	slice_type;
+	__u8	colour_plane_id;
+	__u8	slice_sao_luma_flag : 1;
+	__u8	slice_sao_chroma_flag : 1;
+	__u8	slice_temporal_mvp_enabled_flag : 1;
+	__u8	num_ref_idx_l0_active_minus1;
+	__u8	num_ref_idx_l1_active_minus1;
+	__u8	mvd_l1_zero_flag : 1;
+	__u8	cabac_init_flag : 1;
+	__u8	collocated_from_l0_flag : 1;
+	__u8	collocated_ref_idx;
+	__u8	five_minus_max_num_merge_cand;
+	__s8	slice_qp_delta;
+	__s8	slice_cb_qp_offset;
+	__s8	slice_cr_qp_offset;
+	__u8	slice_deblocking_filter_disabled_flag : 1;
+	__s8	slice_beta_offset_div2;
+	__s8	slice_tc_offset_div2;
+	__u8	slice_loop_filter_across_slices_enabled_flag : 1;
+	__u8	num_entry_point_offsets;
+	__u8	entry_point_offset_minus1[256];
+
+	struct v4l2_hevc_pred_weight_table pred_weight_table;
+
+	__u8	num_rps_poc_st_curr_before;
+	__u8	num_rps_poc_st_curr_after;
+	__u8	num_rps_poc_lt_curr;
+
+	// TODO: reference frames
 };
 
 #endif
