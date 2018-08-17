@@ -1332,8 +1332,9 @@ struct v4l2_ctrl_h264_decode_param {
 #define V4L2_HEVC_SLICE_TYPE_I	2
 
 struct v4l2_ctrl_hevc_sps {
+	/* ISO/IEC 23008-2, ITU-T Rec. H.265: Sequence parameter set */
 	__u8	chroma_format_idc;
-	__u8	separate_colour_plane_flag : 1;
+	__u8	separate_colour_plane_flag;
 	__u16	pic_width_in_luma_samples;
 	__u16	pic_height_in_luma_samples;
 	__u8	bit_depth_luma_minus8;
@@ -1348,101 +1349,128 @@ struct v4l2_ctrl_hevc_sps {
 	__u8	log2_diff_max_min_luma_transform_block_size;
 	__u8	max_transform_hierarchy_depth_inter;
 	__u8	max_transform_hierarchy_depth_intra;
-	__u8	scaling_list_enabled_flag : 1;
-	__u8	amp_enabled_flag : 1;
-	__u8	sample_adaptive_offset_enabled_flag : 1;
-	__u8	pcm_enabled_flag : 1;
+	__u8	scaling_list_enabled_flag;
+	__u8	amp_enabled_flag;
+	__u8	sample_adaptive_offset_enabled_flag;
+	__u8	pcm_enabled_flag;
 	__u8	pcm_sample_bit_depth_luma_minus1;
 	__u8	pcm_sample_bit_depth_chroma_minus1;
 	__u8	log2_min_pcm_luma_coding_block_size_minus3;
 	__u8	log2_diff_max_min_pcm_luma_coding_block_size;
-	__u8	pcm_loop_filter_disabled_flag : 1;
+	__u8	pcm_loop_filter_disabled_flag;
 	__u8	num_short_term_ref_pic_sets;
-	__u8	long_term_ref_pics_present_flag : 1;
+	__u8	long_term_ref_pics_present_flag;
 	__u8	num_long_term_ref_pic_sps;
-	__u8	sps_temporal_mvp_enabled_flag : 1;
-	__u8	strong_intra_smoothing_enabled_flag : 1;
+	__u8	sps_temporal_mvp_enabled_flag;
+	__u8	strong_intra_smoothing_enabled_flag;
 };
 
 struct v4l2_ctrl_hevc_pps {
-	__u8	dependent_slice_segment_flag : 1;
-	__u8	output_flag_present_flag : 1;
+	/* ISO/IEC 23008-2, ITU-T Rec. H.265: Picture parameter set */
+	__u8	dependent_slice_segment_flag;
+	__u8	output_flag_present_flag;
 	__u8	num_extra_slice_header_bits;
-	__u8	sign_data_hiding_enabled_flag : 1;
-	__u8	cabac_init_present_flag : 1;
+	__u8	sign_data_hiding_enabled_flag;
+	__u8	cabac_init_present_flag;
 	__s8	init_qp_minus26;
-	__u8	constrained_intra_pred_flag : 1;
-	__u8	transform_skip_enabled_flag : 1;
-	__u8	cu_qp_delta_enabled_flag : 1;
+	__u8	constrained_intra_pred_flag;
+	__u8	transform_skip_enabled_flag;
+	__u8	cu_qp_delta_enabled_flag;
 	__u8	diff_cu_qp_delta_depth;
 	__s8	pps_cb_qp_offset;
 	__s8	pps_cr_qp_offset;
-	__u8	pps_slice_chroma_qp_offsets_present_flag : 1;
-	__u8	weighted_pred_flag : 1;
-	__u8	weighted_bipred_flag : 1;
-	__u8	transquant_bypass_enabled_flag : 1;
-	__u8	tiles_enabled_flag : 1;
-	__u8	entropy_coding_sync_enabled_flag : 1;
+	__u8	pps_slice_chroma_qp_offsets_present_flag;
+	__u8	weighted_pred_flag;
+	__u8	weighted_bipred_flag;
+	__u8	transquant_bypass_enabled_flag;
+	__u8	tiles_enabled_flag;
+	__u8	entropy_coding_sync_enabled_flag;
 	__u8	num_tile_columns_minus1;
 	__u8	num_tile_rows_minus1;
 	__u8	column_width_minus1[20];
 	__u8	row_height_minus1[22];
-	__u8	loop_filter_across_tiles_enabled_flag : 1;
-	__u8	pps_loop_filter_across_slices_enabled_flag : 1;
-	__u8	deblocking_filter_override_enabled_flag : 1;
-	__u8	pps_disable_deblocking_filter_flag : 1;
+	__u8	loop_filter_across_tiles_enabled_flag;
+	__u8	pps_loop_filter_across_slices_enabled_flag;
+	__u8	deblocking_filter_override_enabled_flag;
+	__u8	pps_disable_deblocking_filter_flag;
 	__s8	pps_beta_offset_div2;
 	__s8	pps_tc_offset_div2;
-	__u8	lists_modification_present_flag : 1;
+	__u8	lists_modification_present_flag;
 	__u8	log2_parallel_merge_level_minus2;
 };
 
 struct v4l2_hevc_pred_weight_table {
 	__u8	luma_log2_weight_denom;
-	__u8	delta_chroma_log2_weight_denom; // FIXME: maybe directly chroma_log2_weight_denom instead
+	__s8	delta_chroma_log2_weight_denom;
 
-	// TODO: All the other fields from pred_weight_table, needed for P/B frames
-	// consider whether to keep chroma_offset_l0 / chroma_offset_l1 as-is instead of
-	// delta_chroma_offset.
+	__s8	delta_luma_weight_l0[16];
+	__s8	luma_offset_l0[16];
+	__s8	delta_chroma_weight_l0[16][2];
+	__s8	chroma_offset_l0[16][2];
+
+	__s8	delta_luma_weight_l1[16];
+	__s8	luma_offset_l1[16];
+	__s8	delta_chroma_weight_l1[16][2];
+	__s8	chroma_offset_l1[16][2];
+};
+
+#define V4L2_HEVC_DPB_ENTRY_RPS_ST_CURR_BEFORE	0x01
+#define V4L2_HEVC_DPB_ENTRY_RPS_ST_CURR_AFTER	0x02
+#define V4L2_HEVC_DPB_ENTRY_RPS_LT_CURR		0x03
+
+struct v4l2_hevc_dpb_entry {
+	__u32	buffer_index;
+	// FIXME: RPS should be enough to know if long term, but H264 has an explicit flag for it
+	__u8	rps;
+	__u16	pic_order_cnt;
 };
 
 struct v4l2_ctrl_hevc_slice_params {
 	__u32	bit_size;
 	__u32	data_bit_offset;
 
+	/* ISO/IEC 23008-2, ITU-T Rec. H.265: NAL unit header */
 	__u8	nal_unit_type;
 	__u8	nuh_temporal_id_plus1;
 
 	// TODO: picture type
+
+	/* ISO/IEC 23008-2, ITU-T Rec. H.265: General slice segment header */
 	__u8	slice_type;
 	__u8	colour_plane_id;
-	__u8	slice_sao_luma_flag : 1;
-	__u8	slice_sao_chroma_flag : 1;
-	__u8	slice_temporal_mvp_enabled_flag : 1;
+	__u8	slice_sao_luma_flag;
+	__u8	slice_sao_chroma_flag;
+	__u8	slice_temporal_mvp_enabled_flag;
 	__u8	num_ref_idx_l0_active_minus1;
 	__u8	num_ref_idx_l1_active_minus1;
-	__u8	mvd_l1_zero_flag : 1;
-	__u8	cabac_init_flag : 1;
-	__u8	collocated_from_l0_flag : 1;
+	__u8	mvd_l1_zero_flag;
+	__u8	cabac_init_flag;
+	__u8	collocated_from_l0_flag;
 	__u8	collocated_ref_idx;
 	__u8	five_minus_max_num_merge_cand;
 	__s8	slice_qp_delta;
 	__s8	slice_cb_qp_offset;
 	__s8	slice_cr_qp_offset;
-	__u8	slice_deblocking_filter_disabled_flag : 1;
+	__u8	slice_deblocking_filter_disabled_flag;
 	__s8	slice_beta_offset_div2;
 	__s8	slice_tc_offset_div2;
-	__u8	slice_loop_filter_across_slices_enabled_flag : 1;
+	__u8	slice_loop_filter_across_slices_enabled_flag;
 	__u8	num_entry_point_offsets;
 	__u8	entry_point_offset_minus1[256];
 
-	struct v4l2_hevc_pred_weight_table pred_weight_table;
+	struct v4l2_hevc_dpb_entry dpb[16];
+	__u8	num_active_dpb_entries;
+	__u8	ref_idx_l0[16];
+	__u8	ref_idx_l1[16];
 
 	__u8	num_rps_poc_st_curr_before;
 	__u8	num_rps_poc_st_curr_after;
 	__u8	num_rps_poc_lt_curr;
 
-	// TODO: reference frames
+	__u16	pic_order_cnt;
+
+	/* ISO/IEC 23008-2, ITU-T Rec. H.265: Weighted prediction parameter */
+	struct v4l2_hevc_pred_weight_table pred_weight_table;
 };
 
 #endif
