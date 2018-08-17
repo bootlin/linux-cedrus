@@ -2312,7 +2312,7 @@ static struct v4l2_ctrl *v4l2_ctrl_new(struct v4l2_ctrl_handler *hdl,
 		elem_size = sizeof(struct v4l2_ctrl_hevc_sps);
 		break;
 	case V4L2_CTRL_TYPE_HEVC_PPS:
-		elem_size = sizeof(struct v4l2_ctrl_hevc_sps);
+		elem_size = sizeof(struct v4l2_ctrl_hevc_pps);
 		break;
 	case V4L2_CTRL_TYPE_HEVC_SLICE_PARAMS:
 		elem_size = sizeof(struct v4l2_ctrl_hevc_slice_params);
