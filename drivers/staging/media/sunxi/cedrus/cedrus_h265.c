@@ -20,8 +20,9 @@
 #define CEDRUS_H265_ENTRY_POINTS_BUF_SIZE	(4 * SZ_1K)
 #define CEDRUS_H265_MV_COL_BUF_SIZE		(1024 * SZ_1K) // FIXME
 
-static enum cedrus_irq_status
-cedrus_h265_irq_status(struct cedrus_ctx *ctx)
+#define CEDRUS_H265_REF_MAX	16
+
+static enum cedrus_irq_status cedrus_h265_irq_status(struct cedrus_ctx *ctx)
 {
 	struct cedrus_dev *dev = ctx->dev;
 	u32 reg;
@@ -53,34 +54,145 @@ static void cedrus_h265_irq_disable(struct cedrus_ctx *ctx)
 	cedrus_write(dev, VE_DEC_H265_CTRL, reg);
 }
 
-static void cedrus_h265_sram_write(struct cedrus_dev *dev, u32 offset,
-				   u32 *data, unsigned int count)
+static void cedrus_h265_sram_write_offset(struct cedrus_dev *dev, u32 offset)
 {
 	cedrus_write(dev, VE_DEC_H265_SRAM_OFFSET, offset);
+}
 
+static void cedrus_h265_sram_write_data(struct cedrus_dev *dev, u32 *data,
+					unsigned int count)
+{
 	while (count--)
 		cedrus_write(dev, VE_DEC_H265_SRAM_DATA, *data++);
 }
 
-static void cedrus_h265_pic_list_write_single(struct cedrus_dev *dev,
-					      unsigned int index,
-					      u32 pic_order_cnt,
-					      dma_addr_t mv_col_buf_addr,
-					      dma_addr_t dst_luma_addr,
-					      dma_addr_t dst_chroma_addr)
+static void cedrus_h265_frame_info_write_single(struct cedrus_dev *dev,
+						unsigned int index,
+						u32 pic_order_cnt,
+						dma_addr_t mv_col_buf_addr,
+						dma_addr_t dst_luma_addr,
+						dma_addr_t dst_chroma_addr)
 {
-	u32 offset = VE_DEC_H265_SRAM_OFFSET_PIC_LIST +
-		     VE_DEC_H265_SRAM_OFFSET_PIC_LIST_UNIT * index;
+	u32 offset = VE_DEC_H265_SRAM_OFFSET_FRAME_INFO +
+		     VE_DEC_H265_SRAM_OFFSET_FRAME_INFO_UNIT * index;
 	u32 data[6] = {
+		/* Top pic order count */
 		pic_order_cnt,
+		/* Bottom pic order count */
 		pic_order_cnt,
+		/* Top mv info */
 		VE_DEC_H265_SRAM_DATA_ADDR_BASE(mv_col_buf_addr),
+		/* Bottom mv info */
 		VE_DEC_H265_SRAM_DATA_ADDR_BASE(mv_col_buf_addr),
+		/* Luma address */
 		VE_DEC_H265_SRAM_DATA_ADDR_BASE(dst_luma_addr),
+		/* Chroma address */
 		VE_DEC_H265_SRAM_DATA_ADDR_BASE(dst_chroma_addr),
 	};
 
-	cedrus_h265_sram_write(dev, offset, data, ARRAY_SIZE(data));
+	cedrus_h265_sram_write_offset(dev, offset);
+	cedrus_h265_sram_write_data(dev, data, ARRAY_SIZE(data));
+}
+
+static void cedrus_h265_frame_info_write_dpb(struct cedrus_ctx *ctx,
+					     const struct v4l2_hevc_dpb_entry *dpb,
+					     u8 num_active_dpb_entries,
+					     dma_addr_t mv_col_buf_addr) // FIXME: per-buffer
+{
+	struct cedrus_dev *dev = ctx->dev;
+	dma_addr_t dst_luma_addr, dst_chroma_addr;
+	u32 pic_order_cnt;
+	unsigned int i;
+
+	for (i = 0; i < num_active_dpb_entries; i++) {
+		dst_luma_addr = cedrus_dst_buf_addr(ctx, dpb[i].buffer_index, 0); // FIXME - PHYS_OFFSET ?
+		dst_chroma_addr = cedrus_dst_buf_addr(ctx, dpb[i].buffer_index, 1); // FIXME - PHYS_OFFSET ?
+		pic_order_cnt = dpb[i].pic_order_cnt;
+
+		printk(KERN_ERR "DPB entry %d with POC %d\n", i, pic_order_cnt);
+
+		cedrus_h265_frame_info_write_single(dev, i, pic_order_cnt,
+						    mv_col_buf_addr,
+						    dst_luma_addr,
+						    dst_chroma_addr);
+	}
+}
+
+static void cedrus_h265_ref_pic_list_write(struct cedrus_dev *dev,
+					   const u8 list[],
+					   u8 num_ref_idx_active,
+					   const struct v4l2_hevc_dpb_entry *dpb,
+					   u8 num_active_dpb_entries,
+					   u32 sram_offset)
+{
+	unsigned int index;
+	unsigned int shift;
+	unsigned int i;
+	u32 reg = 0;
+	u8 value;
+
+	cedrus_h265_sram_write_offset(dev, sram_offset);
+
+	for (i = 0; i < num_ref_idx_active; i++) {
+		shift = (i % 4) * 8;
+
+		value = list[i];
+		index = value;
+
+		if (dpb[index].rps == V4L2_HEVC_DPB_ENTRY_RPS_LT_CURR)
+			value |= VE_DEC_H265_SRAM_REF_PIC_LIST_LT_REF;
+
+		reg |= value << shift;
+
+		if ((i % 4) == 3 || i == (num_ref_idx_active - 1)) {
+			cedrus_h265_sram_write_data(dev, &reg, 1);
+			reg = 0;
+		}
+	}
+}
+
+static void cedrus_h265_pred_weight_write(struct cedrus_dev *dev,
+					  const s8 delta_luma_weight[],
+					  const s8 luma_offset[],
+					  const s8 delta_chroma_weight[][2],
+					  const s8 chroma_offset[][2],
+					  u8 num_ref_idx_active,
+					  u32 sram_luma_offset,
+					  u32 sram_chroma_offset)
+{
+	unsigned int shift;
+	unsigned int i;
+	u32 reg = 0;
+	u16 value;
+
+	cedrus_h265_sram_write_offset(dev, sram_luma_offset);
+
+	for (i = 0; i < num_ref_idx_active; i++) {
+		shift = (i % 2) * 16;
+
+		value = 0;
+		value |= (delta_luma_weight[i] << 0) & GENMASK(7, 0);
+		value |= (luma_offset[i] << 8) & GENMASK(15, 7);
+
+		reg |= value << shift;
+
+		if ((i % 2) == 1 || i == (num_ref_idx_active - 1)) {
+			cedrus_h265_sram_write_data(dev, &reg, 1);
+			reg = 0;
+		}
+	}
+
+	cedrus_h265_sram_write_offset(dev, sram_chroma_offset);
+
+	for (i = 0; i < num_ref_idx_active; i++) {
+		reg = 0;
+		reg |= (delta_chroma_weight[i][0] << 0) & GENMASK(7, 0);
+		reg |= (chroma_offset[i][0] << 8) & GENMASK(15, 7);
+		reg |= (delta_chroma_weight[i][1] << 16) & GENMASK(23, 16);
+		reg |= (chroma_offset[i][1] << 24) & GENMASK(31, 24);
+
+		cedrus_h265_sram_write_data(dev, &reg, 1);
+	}
 }
 
 static void cedrus_h265_setup(struct cedrus_ctx *ctx,
@@ -90,19 +202,18 @@ static void cedrus_h265_setup(struct cedrus_ctx *ctx,
 	const struct v4l2_ctrl_hevc_sps *sps;
 	const struct v4l2_ctrl_hevc_pps *pps;
 	const struct v4l2_ctrl_hevc_slice_params *slice_params;
+	const struct v4l2_hevc_pred_weight_table *pred_weight_table;
 	dma_addr_t src_buf_addr;
 	dma_addr_t dst_luma_addr, dst_chroma_addr;
 	dma_addr_t mv_col_buf_addr;
 	u32 chroma_log2_weight_denom;
-	u32 output_frame_index;
+	u32 output_pic_list_index;
 	u32 reg;
 
 	sps = run->h265.sps;
 	pps = run->h265.pps;
 	slice_params = run->h265.slice_params;
-
-	u32 slice_len = slice_params->bit_size; //(145067 - 3) * 8;
-	u32 slice_pos = slice_params->data_bit_offset; //(0x11 - 1) * 8;
+	pred_weight_table = &slice_params->pred_weight_table;
 
 	printk(KERN_ERR "%s()\n", __func__);
 
@@ -111,9 +222,10 @@ static void cedrus_h265_setup(struct cedrus_ctx *ctx,
 
 	/* Source offset and length in bits. */
 
-	cedrus_write(dev, VE_DEC_H265_BITS_OFFSET, slice_pos);
+	reg = slice_params->data_bit_offset;
+	cedrus_write(dev, VE_DEC_H265_BITS_OFFSET, reg);
 
-	reg = slice_len - slice_pos;
+	reg = slice_params->bit_size - slice_params->data_bit_offset;
 	cedrus_write(dev, VE_DEC_H265_BITS_LEN, reg);
 
 	/* Source beginning and end addresses. */
@@ -127,7 +239,7 @@ static void cedrus_h265_setup(struct cedrus_ctx *ctx,
 
 	cedrus_write(dev, VE_DEC_H265_BITS_ADDR, reg);
 
-	reg = src_buf_addr + VBV_SIZE - 1;
+	reg = src_buf_addr + VBV_SIZE - 1; // FIXME: use same value as bits_len
 	cedrus_write(dev, VE_DEC_H265_BITS_END_ADDR,
 		     VE_DEC_H265_BITS_END_ADDR_BASE(reg));
 
@@ -153,7 +265,7 @@ static void cedrus_h265_setup(struct cedrus_ctx *ctx,
 	cedrus_write(dev, VE_DEC_H265_DEC_NAL_HDR, reg);
 
 	reg = VE_DEC_H265_DEC_SPS_HDR_STRONG_INTRA_SMOOTHING_ENABLE_FLAG(sps->strong_intra_smoothing_enabled_flag) |
-	      VE_DEC_H265_DEC_SPS_HDR_SPS_TEMPORAL_MVP_ENABLE_FLAG(sps->sps_temporal_mvp_enabled_flag) |
+	      VE_DEC_H265_DEC_SPS_HDR_SPS_TEMPORAL_MVP_ENABLED_FLAG(sps->sps_temporal_mvp_enabled_flag) |
 	      VE_DEC_H265_DEC_SPS_HDR_SAMPLE_ADAPTIVE_OFFSET_ENABLED_FLAG(sps->sample_adaptive_offset_enabled_flag) |
 	      VE_DEC_H265_DEC_SPS_HDR_AMP_ENABLED_FLAG(sps->amp_enabled_flag) |
 	      VE_DEC_H265_DEC_SPS_HDR_MAX_TRANSFORM_HIERARCHY_DEPTH_INTRA(sps->max_transform_hierarchy_depth_intra) |
@@ -167,8 +279,13 @@ static void cedrus_h265_setup(struct cedrus_ctx *ctx,
 	      VE_DEC_H265_DEC_SPS_HDR_CHROMA_FORMAT_IDC(sps->chroma_format_idc);
 	cedrus_write(dev, VE_DEC_H265_DEC_SPS_HDR, reg);
 
-	// TODO: PCM
-	cedrus_write(dev, 0x0000050c, 0x00000000); // PCM
+	reg = VE_DEC_H265_DEC_PCM_CTRL_PCM_ENABLED_FLAG(sps->pcm_enabled_flag) |
+	      VE_DEC_H265_DEC_PCM_CTRL_PCM_LOOP_FILTER_DISABLED_FLAG(sps->pcm_loop_filter_disabled_flag) |
+	      VE_DEC_H265_DEC_PCM_CTRL_LOG2_DIFF_MAX_MIN_PCM_LUMA_CODING_BLOCK_SIZE(sps->log2_diff_max_min_pcm_luma_coding_block_size) |
+	      VE_DEC_H265_DEC_PCM_CTRL_LOG2_MIN_PCM_LUMA_CODING_BLOCK_SIZE_MINUS3(sps->log2_min_pcm_luma_coding_block_size_minus3) |
+	      VE_DEC_H265_DEC_PCM_CTRL_PCM_SAMPLE_BIT_DEPTH_CHROMA_MINUS1(sps->pcm_sample_bit_depth_chroma_minus1) |
+	      VE_DEC_H265_DEC_PCM_CTRL_PCM_SAMPLE_BIT_DEPTH_LUMA_MINUS1(sps->pcm_sample_bit_depth_luma_minus1);
+	cedrus_write(dev, VE_DEC_H265_DEC_PCM_CTRL, reg);
 
 	reg = VE_DEC_H265_DEC_PPS_CTRL0_PPS_CR_QP_OFFSET(pps->pps_cr_qp_offset) |
 	      VE_DEC_H265_DEC_PPS_CTRL0_PPS_CB_QP_OFFSET(pps->pps_cb_qp_offset) |
@@ -182,7 +299,7 @@ static void cedrus_h265_setup(struct cedrus_ctx *ctx,
 
 	/* TODO: Support for tile entry-points. */
 	reg = VE_DEC_H265_DEC_PPS_CTRL1_LOG2_PARALLEL_MERGE_LEVEL_MINUS2(pps->log2_parallel_merge_level_minus2) |
-	      VE_DEC_H265_DEC_PPS_CTRL1_LOOP_FILTER_ACROSS_SLICES_ENABLED_FLAG(pps->pps_loop_filter_across_slices_enabled_flag) |
+	      VE_DEC_H265_DEC_PPS_CTRL1_PPS_LOOP_FILTER_ACROSS_SLICES_ENABLED_FLAG(pps->pps_loop_filter_across_slices_enabled_flag) |
 	      VE_DEC_H265_DEC_PPS_CTRL1_LOOP_FILTER_ACROSS_TILES_ENABLED_FLAG(pps->loop_filter_across_tiles_enabled_flag) |
 	      VE_DEC_H265_DEC_PPS_CTRL1_ENTROPY_CODING_SYNC_ENABLED_FLAG(pps->entropy_coding_sync_enabled_flag) |
 	      VE_DEC_H265_DEC_PPS_CTRL1_TILES_ENABLED_FLAG(0) |
@@ -191,7 +308,7 @@ static void cedrus_h265_setup(struct cedrus_ctx *ctx,
 	      VE_DEC_H265_DEC_PPS_CTRL1_WEIGHTED_PRED_FLAG(pps->weighted_pred_flag);
 	cedrus_write(dev, VE_DEC_H265_DEC_PPS_CTRL1, reg);
 
-	/* TODO: Support for picture type for interlaced videos. */
+	/* TODO: Support picture type for interlaced videos. */
       	reg = VE_DEC_H265_DEC_SLICE_HDR_INFO0_PICTURE_TYPE(0) |
 	      VE_DEC_H265_DEC_SLICE_HDR_INFO0_FIVE_MINUS_MAX_NUM_MERGE_CAND(slice_params->five_minus_max_num_merge_cand) |
 	      VE_DEC_H265_DEC_SLICE_HDR_INFO0_NUM_REF_IDX_L1_ACTIVE_MINUS1(slice_params->num_ref_idx_l1_active_minus1) |
@@ -220,51 +337,86 @@ static void cedrus_h265_setup(struct cedrus_ctx *ctx,
 	cedrus_write(dev, VE_DEC_H265_DEC_SLICE_HDR_INFO1, reg);
 
 	/* TODO: Support for tile entry-points. */
-	chroma_log2_weight_denom = slice_params->pred_weight_table.luma_log2_weight_denom + slice_params->pred_weight_table.delta_chroma_log2_weight_denom;
+	chroma_log2_weight_denom = pred_weight_table->luma_log2_weight_denom +
+				   pred_weight_table->delta_chroma_log2_weight_denom;
 	reg = VE_DEC_H265_DEC_SLICE_HDR_INFO2_NUM_ENTRY_POINT_OFFSETS(0) |
-	      VE_DEC_H265_DEC_SLICE_HDR_INFO2_CHROMA_LOG2_WEIGHT_DENOM(slice_params->pred_weight_table.luma_log2_weight_denom) |
-	      VE_DEC_H265_DEC_SLICE_HDR_INFO2_LUMA_LOG2_WEIGHT_DENOM(chroma_log2_weight_denom);
+	      VE_DEC_H265_DEC_SLICE_HDR_INFO2_CHROMA_LOG2_WEIGHT_DENOM(chroma_log2_weight_denom) |
+	      VE_DEC_H265_DEC_SLICE_HDR_INFO2_LUMA_LOG2_WEIGHT_DENOM(pred_weight_table->luma_log2_weight_denom);
 	cedrus_write(dev, VE_DEC_H265_DEC_SLICE_HDR_INFO2, reg);
 
-	// picture header
-//	cedrus_write(dev, 0x00000500, 0x00000054); // nal header
-//	cedrus_write(dev, 0x00000504, 0x07019801); // SPS
-//	cedrus_write(dev, 0x00000508, 0x01680280); // pic size
-//	cedrus_write(dev, 0x0000050c, 0x00000000); // PCM
-// 	cedrus_write(dev, 0x00000510, 0x00000019); // PPS 0
-//	cedrus_write(dev, 0x00000514, 0x00000051); // PPS 1
+	/* Decoded picture size. */
 
 	reg = VE_DEC_H265_DEC_PIC_SIZE_WIDTH(ctx->src_fmt.width) |
 	      VE_DEC_H265_DEC_PIC_SIZE_HEIGHT(ctx->src_fmt.height);
 
 	cedrus_write(dev, VE_DEC_H265_DEC_PIC_SIZE, reg);
 
-	// slice header
-//	cedrus_write(dev, 0x00000520, 0x00000989); // slice header 0
-//	cedrus_write(dev, 0x00000524, 0x0060002b); // slice header 1
-//	cedrus_write(dev, 0x00000528, 0x00000500); // slice header 2
-
 	/* Scaling list */
 	reg = VE_DEC_H265_SCALING_LIST_CTRL0_DEFAULT;
 	cedrus_write(dev, VE_DEC_H265_SCALING_LIST_CTRL0, reg);
 
-	// No tiles entry point list!
-	// cedrus_write(dev, 0x00000580, 0x00000000); // entry point low addr
+	/* TODO: tiles entry-points. */
 
 	// neightbor info addr
 
 	reg = VE_DEC_H265_NEIGHBOR_INFO_ADDR_BASE(ctx->codec.h265.neighbor_info_buf_addr);
 	cedrus_write(dev, VE_DEC_H265_NEIGHBOR_INFO_ADDR, reg);
 
-	output_frame_index = 16;
-
 	mv_col_buf_addr = ctx->codec.h265.mv_col_buf_addr; // FIXME: per-frame
+
+	/* Write decoded picture buffer in pic list. */
+
+	cedrus_h265_frame_info_write_dpb(ctx, slice_params->dpb,
+					 slice_params->num_active_dpb_entries,
+					 mv_col_buf_addr);
+
+	/* Output frame. */
+
+	output_pic_list_index = CEDRUS_H265_REF_MAX;
 	dst_luma_addr = cedrus_dst_buf_addr(ctx, run->dst->vb2_buf.index, 0); // FIXME - PHYS_OFFSET ?
 	dst_chroma_addr = cedrus_dst_buf_addr(ctx, run->dst->vb2_buf.index, 1); // FIXME - PHYS_OFFSET ?
 
-	cedrus_h265_pic_list_write_single(dev, output_frame_index, 0, mv_col_buf_addr, dst_luma_addr, dst_chroma_addr);
+	cedrus_h265_frame_info_write_single(dev, output_pic_list_index,
+					    slice_params->pic_order_cnt,
+					    mv_col_buf_addr, dst_luma_addr,
+					    dst_chroma_addr);
 
-	cedrus_write(dev, VE_DEC_H265_OUTPUT_FRAME_IDX, output_frame_index);
+	cedrus_write(dev, VE_DEC_H265_OUTPUT_FRAME_IDX, output_pic_list_index);
+
+	/* Reference picture list 0 (for P/B frames). */
+	if (slice_params->slice_type != V4L2_HEVC_SLICE_TYPE_I) {
+		cedrus_h265_ref_pic_list_write(dev, slice_params->ref_idx_l0,
+			slice_params->num_ref_idx_l0_active_minus1 + 1,
+			slice_params->dpb, slice_params->num_active_dpb_entries,
+			VE_DEC_H265_SRAM_OFFSET_REF_PIC_LIST0);
+
+		cedrus_h265_pred_weight_write(dev,
+			pred_weight_table->delta_luma_weight_l0,
+			pred_weight_table->luma_offset_l0,
+			pred_weight_table->delta_chroma_weight_l0,
+			pred_weight_table->chroma_offset_l0,
+			slice_params->num_ref_idx_l0_active_minus1 + 1,
+			VE_DEC_H265_SRAM_OFFSET_PRED_WEIGHT_LUMA_L0,
+			VE_DEC_H265_SRAM_OFFSET_PRED_WEIGHT_CHROMA_L0);
+	}
+
+	/* Reference picture list 0 (for B frames). */
+	if (slice_params->slice_type == V4L2_HEVC_SLICE_TYPE_B) {
+		cedrus_h265_ref_pic_list_write(dev, slice_params->ref_idx_l1,
+			slice_params->num_ref_idx_l1_active_minus1 + 1,
+			slice_params->dpb,
+			slice_params->num_active_dpb_entries,
+			VE_DEC_H265_SRAM_OFFSET_REF_PIC_LIST1);
+
+		cedrus_h265_pred_weight_write(dev,
+			pred_weight_table->delta_luma_weight_l1,
+			pred_weight_table->luma_offset_l1,
+			pred_weight_table->delta_chroma_weight_l1,
+			pred_weight_table->chroma_offset_l1,
+			slice_params->num_ref_idx_l1_active_minus1 + 1,
+			VE_DEC_H265_SRAM_OFFSET_PRED_WEIGHT_LUMA_L1,
+			VE_DEC_H265_SRAM_OFFSET_PRED_WEIGHT_CHROMA_L1);
+	}
 
 	/* Enable appropriate interruptions. */
 	cedrus_write(dev, VE_DEC_H265_CTRL, VE_DEC_H265_CTRL_IRQ_MASK);
