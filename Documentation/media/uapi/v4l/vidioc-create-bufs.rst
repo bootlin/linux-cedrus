@@ -102,7 +102,15 @@ than the number requested.
       - ``format``
       - Filled in by the application, preserved by the driver.
     * - __u32
-      - ``reserved``\ [8]
+      - ``capabilities``
+      - Set by the driver. If 0, then the driver doesn't support
+        capabilities. In that case all you know is that the driver is
+	guaranteed to support ``V4L2_MEMORY_MMAP`` and *might* support
+	other :c:type:`v4l2_memory` types. It will not support any others
+	capabilities. See :ref:`here <v4l2-buf-capabilities>` for a list of the
+	capabilities.
+    * - __u32
+      - ``reserved``\ [7]
       - A place holder for future extensions. Drivers and applications
 	must set the array to zero.
 
