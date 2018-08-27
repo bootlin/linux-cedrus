@@ -1674,6 +1674,422 @@ enum v4l2_mpeg_video_h264_hierarchical_coding_type -
 	non-intra-coded frames, in zigzag scanning order. Only relevant for
 	non-4:2:0 YUV formats.
 
+.. _v4l2-mpeg-hevc:
+
+``V4L2_CID_MPEG_VIDEO_HEVC_SPS (struct)``
+    Specifies the Sequence Parameter Set fields (as extracted from the
+    bitstream) for the associated HEVC slice data.
+    The bitstream parameters are defined according to the ISO/IEC 23008-2 and
+    ITU-T Rec. H.265 specifications.
+
+.. c:type:: v4l2_ctrl_hevc_sps
+
+.. cssclass:: longtable
+
+.. flat-table:: struct v4l2_ctrl_hevc_sps
+    :header-rows:  0
+    :stub-columns: 0
+    :widths:       1 1 2
+
+    * - __u8
+      - ``chroma_format_idc``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``separate_colour_plane_flag``
+      - Syntax description inherited from the specification.
+    * - __u16
+      - ``pic_width_in_luma_samples``
+      - Syntax description inherited from the specification.
+    * - __u16
+      - ``pic_height_in_luma_samples``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``bit_depth_luma_minus8``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``bit_depth_chroma_minus8``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``log2_max_pic_order_cnt_lsb_minus4``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``sps_max_dec_pic_buffering_minus1``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``sps_max_num_reorder_pics``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``sps_max_latency_increase_plus1``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``log2_min_luma_coding_block_size_minus3``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``log2_diff_max_min_luma_coding_block_size``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``log2_min_luma_transform_block_size_minus2``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``log2_diff_max_min_luma_transform_block_size``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``max_transform_hierarchy_depth_inter``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``max_transform_hierarchy_depth_intra``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``scaling_list_enabled_flag``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``amp_enabled_flag``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``sample_adaptive_offset_enabled_flag``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``pcm_enabled_flag``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``pcm_sample_bit_depth_luma_minus1``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``pcm_sample_bit_depth_chroma_minus1``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``log2_min_pcm_luma_coding_block_size_minus3``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``log2_diff_max_min_pcm_luma_coding_block_size``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``pcm_loop_filter_disabled_flag``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``num_short_term_ref_pic_sets``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``long_term_ref_pics_present_flag``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``num_long_term_ref_pics_sps``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``sps_temporal_mvp_enabled_flag``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``strong_intra_smoothing_enabled_flag``
+      - Syntax description inherited from the specification.
+
+``V4L2_CID_MPEG_VIDEO_HEVC_PPS (struct)``
+    Specifies the Picture Parameter Set fields (as extracted from the
+    bitstream) for the associated HEVC slice data.
+    The bitstream parameters are defined according to the ISO/IEC 23008-2 and
+    ITU-T Rec. H.265 specifications.
+
+.. c:type:: v4l2_ctrl_hevc_pps
+
+.. cssclass:: longtable
+
+.. flat-table:: struct v4l2_ctrl_hevc_pps
+    :header-rows:  0
+    :stub-columns: 0
+    :widths:       1 1 2
+
+    * - __u8
+      - ``dependent_slice_segment_flag``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``output_flag_present_flag``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``num_extra_slice_header_bits``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``sign_data_hiding_enabled_flag``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``cabac_init_present_flag``
+      - Syntax description inherited from the specification.
+    * - __s8
+      - ``init_qp_minus26``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``constrained_intra_pred_flag``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``transform_skip_enabled_flag``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``cu_qp_delta_enabled_flag``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``diff_cu_qp_delta_depth``
+      - Syntax description inherited from the specification.
+    * - __s8
+      - ``pps_cb_qp_offset``
+      - Syntax description inherited from the specification.
+    * - __s8
+      - ``pps_cr_qp_offset``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``pps_slice_chroma_qp_offsets_present_flag``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``weighted_pred_flag``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``weighted_bipred_flag``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``transquant_bypass_enabled_flag``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``tiles_enabled_flag``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``entropy_coding_sync_enabled_flag``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``num_tile_columns_minus1``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``num_tile_rows_minus1``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``column_width_minus1[20]``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``row_height_minus1[22]``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``loop_filter_across_tiles_enabled_flag``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``pps_loop_filter_across_slices_enabled_flag``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``deblocking_filter_override_enabled_flag``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``pps_disable_deblocking_filter_flag``
+      - Syntax description inherited from the specification.
+    * - __s8
+      - ``pps_beta_offset_div2``
+      - Syntax description inherited from the specification.
+    * - __s8
+      - ``pps_tc_offset_div2``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``lists_modification_present_flag``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``log2_parallel_merge_level_minus2``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``slice_segment_header_extension_present_flag``
+      - Syntax description inherited from the specification.
+
+``V4L2_CID_MPEG_VIDEO_HEVC_SLICE_PARAMS (struct)``
+    Specifies various slice-specific parameters, especially from the NAL unit
+    header, general slice segment header and weighted prediction parameter
+    parts of the bitstream.
+    The bitstream parameters are defined according to the ISO/IEC 23008-2 and
+    ITU-T Rec. H.265 specifications.
+
+.. c:type:: v4l2_ctrl_hevc_slice_params
+
+.. cssclass:: longtable
+
+.. flat-table:: struct v4l2_ctrl_hevc_slice_params
+    :header-rows:  0
+    :stub-columns: 0
+    :widths:       1 1 2
+
+    * - __u32
+      - ``bit_size``
+      - Size (in bits) of the current slice data.
+    * - __u32
+      - ``data_bit_offset``
+      - Offset (in bits) to the video data in the current slice data.
+    * - __u8
+      - ``nal_unit_type``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``nuh_temporal_id_plus1``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``slice_type``
+      - Syntax description inherited from the specification.
+	(V4L2_HEVC_SLICE_TYPE_I, V4L2_HEVC_SLICE_TYPE_P or
+	V4L2_HEVC_SLICE_TYPE_B).
+    * - __u8
+      - ``colour_plane_id``
+      - Syntax description inherited from the specification.
+    * - __u16
+      - ``slice_pic_order_cnt``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``slice_sao_luma_flag``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``slice_sao_chroma_flag``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``slice_temporal_mvp_enabled_flag``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``num_ref_idx_l0_active_minus1``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``num_ref_idx_l1_active_minus1``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``mvd_l1_zero_flag``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``cabac_init_flag``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``collocated_from_l0_flag``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``collocated_ref_idx``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``five_minus_max_num_merge_cand``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``use_integer_mv_flag``
+      - Syntax description inherited from the specification.
+    * - __s8
+      - ``slice_qp_delta``
+      - Syntax description inherited from the specification.
+    * - __s8
+      - ``slice_cb_qp_offset``
+      - Syntax description inherited from the specification.
+    * - __s8
+      - ``slice_cr_qp_offset``
+      - Syntax description inherited from the specification.
+    * - __s8
+      - ``slice_act_y_qp_offset``
+      - Syntax description inherited from the specification.
+    * - __s8
+      - ``slice_act_cb_qp_offset``
+      - Syntax description inherited from the specification.
+    * - __s8
+      - ``slice_act_cr_qp_offset``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``slice_deblocking_filter_disabled_flag``
+      - Syntax description inherited from the specification.
+    * - __s8
+      - ``slice_beta_offset_div2``
+      - Syntax description inherited from the specification.
+    * - __s8
+      - ``slice_tc_offset_div2``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``slice_loop_filter_across_slices_enabled_flag``
+      - Syntax description inherited from the specification.
+    * - __u8
+      - ``pic_struct``
+      - Syntax description inherited from the specification.
+    * - struct :c:type:`v4l2_hevc_dpb_entry`
+      - ``dpb[V4L2_HEVC_DPB_ENTRIES_NUM_MAX]``
+      - The decoded picture buffer, for meta-data about reference frames.
+    * - __u8
+      - ``num_active_dpb_entries``
+      - The number of entries in ``dpb``.
+    * - __u8
+      - ``ref_idx_l0[V4L2_HEVC_DPB_ENTRIES_NUM_MAX]``
+      - The list of L0 reference elements as indices in the DPB.
+    * - __u8
+      - ``ref_idx_l1[V4L2_HEVC_DPB_ENTRIES_NUM_MAX]``
+      - The list of L1 reference elements as indices in the DPB.
+    * - __u8
+      - ``num_rps_poc_st_curr_before``
+      - The number of reference pictures in the short-term set that come before
+        the current frame.
+    * - __u8
+      - ``num_rps_poc_st_curr_after``
+      - The number of reference pictures in the short-term set that come after
+        the current frame.
+    * - __u8
+      - ``num_rps_poc_lt_curr``
+      - The number of reference pictures in the long-term set.
+    * - struct :c:type:`v4l2_hevc_pred_weight_table`
+      - ``pred_weight_table``
+      - The prediction weight coefficients for inter-picture prediction.
+
+.. c:type:: v4l2_hevc_dpb_entry
+
+.. cssclass:: longtable
+
+.. flat-table:: struct v4l2_hevc_dpb_entry
+    :header-rows:  0
+    :stub-columns: 0
+    :widths:       1 1 2
+
+    * - __u32
+      - ``buffer_index``
+      - The V4L2 buffer index that matches the associated reference picture.
+    * - __u8
+      - ``rps``
+      - The reference set for the reference frame
+        (V4L2_HEVC_DPB_ENTRY_RPS_ST_CURR_BEFORE,
+        V4L2_HEVC_DPB_ENTRY_RPS_ST_CURR_AFTER or
+        V4L2_HEVC_DPB_ENTRY_RPS_LT_CURR)
+    * - __u8
+      - ``field_pic``
+      - Whether the reference is a field picture or a frame.
+    * - __u16
+      - ``pic_order_cnt[2]``
+      - Le picture order count of the reference. Only the first element of the
+        array is used for frame pictures, while the first element identifies the
+        top field and the second the bottom field in field-coded pictures.
+
+.. c:type:: v4l2_hevc_pred_weight_table
+
+.. cssclass:: longtable
+
+.. flat-table:: struct v4l2_hevc_pred_weight_table
+    :header-rows:  0
+    :stub-columns: 0
+    :widths:       1 1 2
+
+    * - __u8
+      - ``luma_log2_weight_denom``
+      - Syntax description inherited from the specification.
+    * - __s8
+      - ``delta_chroma_log2_weight_denom``
+      - Syntax description inherited from the specification.
+    * - __s8
+      - ``delta_luma_weight_l0[V4L2_HEVC_DPB_ENTRIES_NUM_MAX]``
+      - Syntax description inherited from the specification.
+    * - __s8
+      - ``luma_offset_l0[V4L2_HEVC_DPB_ENTRIES_NUM_MAX]``
+      - Syntax description inherited from the specification.
+    * - __s8
+      - ``delta_chroma_weight_l0[V4L2_HEVC_DPB_ENTRIES_NUM_MAX][2]``
+      - Syntax description inherited from the specification.
+    * - __s8
+      - ``chroma_offset_l0[V4L2_HEVC_DPB_ENTRIES_NUM_MAX][2]``
+      - Syntax description inherited from the specification.
+    * - __s8
+      - ``delta_luma_weight_l1[V4L2_HEVC_DPB_ENTRIES_NUM_MAX]``
+      - Syntax description inherited from the specification.
+    * - __s8
+      - ``luma_offset_l1[V4L2_HEVC_DPB_ENTRIES_NUM_MAX]``
+      - Syntax description inherited from the specification.
+    * - __s8
+      - ``delta_chroma_weight_l1[V4L2_HEVC_DPB_ENTRIES_NUM_MAX][2]``
+      - Syntax description inherited from the specification.
+    * - __s8
+      - ``chroma_offset_l1[V4L2_HEVC_DPB_ENTRIES_NUM_MAX][2]``
+      - Syntax description inherited from the specification.
+
 MFC 5.1 MPEG Controls
 ---------------------
 
