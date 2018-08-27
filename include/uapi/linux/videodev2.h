@@ -655,6 +655,7 @@ struct v4l2_pix_format {
 #define V4L2_PIX_FMT_VP8      v4l2_fourcc('V', 'P', '8', '0') /* VP8 */
 #define V4L2_PIX_FMT_VP9      v4l2_fourcc('V', 'P', '9', '0') /* VP9 */
 #define V4L2_PIX_FMT_HEVC     v4l2_fourcc('H', 'E', 'V', 'C') /* HEVC aka H.265 */
+#define V4L2_PIX_FMT_HEVC_SLICE v4l2_fourcc('S', '2', '6', '5') /* H265 parsed slices */
 #define V4L2_PIX_FMT_FWHT     v4l2_fourcc('F', 'W', 'H', 'T') /* Fast Walsh Hadamard Transform (vicodec) */
 
 /*  Vendor-specific formats   */
@@ -1630,6 +1631,9 @@ struct v4l2_ext_control {
 		struct v4l2_ctrl_h264_scaling_matrix __user *p_h264_scal_mtrx;
 		struct v4l2_ctrl_h264_slice_param __user *p_h264_slice_param;
 		struct v4l2_ctrl_h264_decode_param __user *p_h264_decode_param;
+		struct v4l2_ctrl_hevc_sps __user *p_hevc_sps;
+		struct v4l2_ctrl_hevc_pps __user *p_hevc_pps;
+		struct v4l2_ctrl_hevc_slice_params __user *p_hevc_slice_params;
 		void __user *ptr;
 	};
 } __attribute__ ((packed));
@@ -1682,6 +1686,9 @@ enum v4l2_ctrl_type {
 	V4L2_CTRL_TYPE_H264_SCALING_MATRIX = 0x0107,
 	V4L2_CTRL_TYPE_H264_SLICE_PARAMS = 0x0108,
 	V4L2_CTRL_TYPE_H264_DECODE_PARAMS = 0x0109,
+	V4L2_CTRL_TYPE_HEVC_SPS = 0x0110,
+	V4L2_CTRL_TYPE_HEVC_PPS = 0x0111,
+	V4L2_CTRL_TYPE_HEVC_SLICE_PARAMS = 0x0112,
 };
 
 /*  Used in the VIDIOC_QUERYCTRL ioctl for querying controls */
