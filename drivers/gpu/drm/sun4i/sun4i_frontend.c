@@ -10,12 +10,14 @@
 #include <linux/clk.h>
 #include <linux/component.h>
 #include <linux/module.h>
+#include <linux/of_device.h>
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
 #include <linux/regmap.h>
 #include <linux/reset.h>
 
 #include "sun4i_drv.h"
+#include "sun4i_format.h"
 #include "sun4i_frontend.h"
 
 static const u32 sun4i_frontend_vert_coef[32] = {
@@ -52,6 +54,11 @@ static void sun4i_frontend_scaler_init(struct sun4i_frontend *frontend)
 {
 	int i;
 
+	if (frontend->data->has_access_ctrl)
+		regmap_write_bits(frontend->regs, SUN4I_FRONTEND_FRM_CTRL_REG,
+				  SUN4I_FRONTEND_FRM_CTRL_COEF_ACCESS_CTRL,
+				  SUN4I_FRONTEND_FRM_CTRL_COEF_ACCESS_CTRL);
+
 	for (i = 0; i < 32; i++) {
 		regmap_write(frontend->regs, SUN4I_FRONTEND_CH0_HORZCOEF0_REG(i),
 			     sun4i_frontend_horz_coef[2 * i]);
@@ -67,9 +74,11 @@ static void sun4i_frontend_scaler_init(struct sun4i_frontend *frontend)
 			     sun4i_frontend_vert_coef[i]);
 	}
 
-	regmap_update_bits(frontend->regs, SUN4I_FRONTEND_FRM_CTRL_REG,
-			   SUN4I_FRONTEND_FRM_CTRL_COEF_ACCESS_CTRL,
-			   SUN4I_FRONTEND_FRM_CTRL_COEF_ACCESS_CTRL);
+	if (frontend->data->has_coef_rdy_bit)
+		regmap_write_bits(frontend->regs,
+				  SUN4I_FRONTEND_FRM_CTRL_REG,
+				  SUN4I_FRONTEND_FRM_CTRL_COEF_RDY,
+				  SUN4I_FRONTEND_FRM_CTRL_COEF_RDY);
 }
 
 int sun4i_frontend_init(struct sun4i_frontend *frontend)
@@ -89,26 +98,183 @@ void sun4i_frontend_update_buffer(struct sun4i_frontend *frontend,
 {
 	struct drm_plane_state *state = plane->state;
 	struct drm_framebuffer *fb = state->fb;
+	uint32_t format = fb->format->format;
+	uint32_t width, height;
+	uint32_t stride, offset;
+	bool swap;
 	dma_addr_t paddr;
 
-	/* Set the line width */
-	DRM_DEBUG_DRIVER("Frontend stride: %d bytes\n", fb->pitches[0]);
-	regmap_write(frontend->regs, SUN4I_FRONTEND_LINESTRD0_REG,
-		     fb->pitches[0]);
+	width = state->src_w >> 16;
+	height = state->src_h >> 16;
+
+	if (fb->modifier == DRM_FORMAT_MOD_ALLWINNER_MB32_TILED) {
+		/*
+		 * In MB32 tiled mode, the stride is defined as the distance
+		 * between the start of the end line of the current tile and
+		 * the start of the first line in the next vertical tile.
+		 *
+		 * Tiles are represented linearly in memory, thus the end line
+		 * of current tile starts at: 31 * 32 (31 lines of 32 cols),
+		 * the next vertical tile starts at: 32-bit-aligned-width * 32
+		 * and the distance is: 32 * (32-bit-aligned-width - 31).
+		 */
+
+		stride = (fb->pitches[0] - 31) * 32;
+		regmap_write(frontend->regs, SUN4I_FRONTEND_LINESTRD0_REG,
+			     stride);
+
+		/* Offset of the bottom-right point in the end tile. */
+		offset = (width + (32 - 1)) & (32 - 1);
+		regmap_write(frontend->regs, SUN4I_FRONTEND_TB_OFF0_REG,
+			     SUN4I_FRONTEND_TB_OFF_X1(offset));
+
+		if (drm_format_num_planes(format) > 1) {
+			stride = (fb->pitches[1] - 31) * 32;
+			regmap_write(frontend->regs, SUN4I_FRONTEND_LINESTRD1_REG,
+				     stride);
+
+			regmap_write(frontend->regs, SUN4I_FRONTEND_TB_OFF1_REG,
+				     SUN4I_FRONTEND_TB_OFF_X1(offset));
+		}
+
+		if (drm_format_num_planes(format) > 2) {
+			stride = (fb->pitches[2] - 31) * 32;
+			regmap_write(frontend->regs, SUN4I_FRONTEND_LINESTRD2_REG,
+				     stride);
+
+			regmap_write(frontend->regs, SUN4I_FRONTEND_TB_OFF2_REG,
+				     SUN4I_FRONTEND_TB_OFF_X1(offset));
+		}
+	} else {
+		regmap_write(frontend->regs, SUN4I_FRONTEND_LINESTRD0_REG,
+			     fb->pitches[0]);
+
+		if (drm_format_num_planes(format) > 1)
+			regmap_write(frontend->regs, SUN4I_FRONTEND_LINESTRD1_REG,
+				     fb->pitches[1]);
+
+		if (drm_format_num_planes(format) > 2)
+			regmap_write(frontend->regs, SUN4I_FRONTEND_LINESTRD2_REG,
+				     fb->pitches[2]);
+	}
 
 	/* Set the physical address of the buffer in memory */
 	paddr = drm_fb_cma_get_gem_addr(fb, state, 0);
 	paddr -= PHYS_OFFSET;
-	DRM_DEBUG_DRIVER("Setting buffer address to %pad\n", &paddr);
+	DRM_DEBUG_DRIVER("Setting buffer #0 address to %pad\n", &paddr);
 	regmap_write(frontend->regs, SUN4I_FRONTEND_BUF_ADDR0_REG, paddr);
+
+	/* Some planar formats require chroma channel swapping by hand. */
+	swap = sun4i_frontend_format_chroma_requires_swap(format);
+
+	if (drm_format_num_planes(format) > 1) {
+		paddr = drm_fb_cma_get_gem_addr(fb, state, swap ? 2 : 1);
+		paddr -= PHYS_OFFSET;
+		DRM_DEBUG_DRIVER("Setting buffer #1 address to %pad\n", &paddr);
+		regmap_write(frontend->regs, SUN4I_FRONTEND_BUF_ADDR1_REG,
+			     paddr);
+	}
+
+	if (drm_format_num_planes(format) > 2) {
+		paddr = drm_fb_cma_get_gem_addr(fb, state, swap ? 1 : 2);
+		paddr -= PHYS_OFFSET;
+		DRM_DEBUG_DRIVER("Setting buffer #2 address to %pad\n", &paddr);
+		regmap_write(frontend->regs, SUN4I_FRONTEND_BUF_ADDR2_REG,
+			     paddr);
+	}
 }
 EXPORT_SYMBOL(sun4i_frontend_update_buffer);
 
 static int sun4i_frontend_drm_format_to_input_fmt(uint32_t fmt, u32 *val)
 {
+	if (sun4i_format_is_rgb(fmt))
+		*val = SUN4I_FRONTEND_INPUT_FMT_DATA_FMT_RGB;
+	else if (sun4i_format_is_yuv411(fmt))
+		*val = SUN4I_FRONTEND_INPUT_FMT_DATA_FMT_YUV411;
+	else if (sun4i_format_is_yuv420(fmt))
+		*val = SUN4I_FRONTEND_INPUT_FMT_DATA_FMT_YUV420;
+	else if (sun4i_format_is_yuv422(fmt))
+		*val = SUN4I_FRONTEND_INPUT_FMT_DATA_FMT_YUV422;
+	else if (sun4i_format_is_yuv444(fmt))
+		*val = SUN4I_FRONTEND_INPUT_FMT_DATA_FMT_YUV444;
+	else
+		return -EINVAL;
+
+	return 0;
+}
+
+static int sun4i_frontend_drm_format_to_input_mode(uint32_t fmt, u32 *val,
+						   uint64_t modifier)
+{
+	bool tiled = modifier == DRM_FORMAT_MOD_ALLWINNER_MB32_TILED;
+
+	if (tiled && !sun4i_format_supports_tiling(fmt))
+		return -EINVAL;
+
+	if (sun4i_format_is_packed(fmt))
+		*val = SUN4I_FRONTEND_INPUT_FMT_DATA_MOD_PACKED;
+	else if (sun4i_format_is_semiplanar(fmt))
+		*val = tiled ? SUN4I_FRONTEND_INPUT_FMT_DATA_MOD_MB32_SEMIPLANAR
+			     : SUN4I_FRONTEND_INPUT_FMT_DATA_MOD_SEMIPLANAR;
+	else if (sun4i_format_is_planar(fmt))
+		*val = tiled ? SUN4I_FRONTEND_INPUT_FMT_DATA_MOD_MB32_PLANAR
+			     : SUN4I_FRONTEND_INPUT_FMT_DATA_MOD_PLANAR;
+	else
+		return -EINVAL;
+
+	return 0;
+}
+
+static int sun4i_frontend_drm_format_to_input_sequence(uint32_t fmt, u32 *val)
+{
+	/* Planar formats have an explicit input sequence. */
+	if (sun4i_format_is_planar(fmt)) {
+		*val = 0;
+		return 0;
+	}
+
 	switch (fmt) {
-	case DRM_FORMAT_ARGB8888:
-		*val = 5;
+	/* RGB */
+	case DRM_FORMAT_XRGB8888:
+		*val = SUN4I_FRONTEND_INPUT_FMT_DATA_PS_XRGB;
+		return 0;
+
+	case DRM_FORMAT_BGRX8888:
+		*val = SUN4I_FRONTEND_INPUT_FMT_DATA_PS_BGRX;
+		return 0;
+
+	/* YUV420 */
+	case DRM_FORMAT_NV12:
+		*val = SUN4I_FRONTEND_INPUT_FMT_DATA_PS_UV;
+		return 0;
+
+	case DRM_FORMAT_NV21:
+		*val = SUN4I_FRONTEND_INPUT_FMT_DATA_PS_VU;
+		return 0;
+
+	/* YUV422 */
+	case DRM_FORMAT_YUYV:
+		*val = SUN4I_FRONTEND_INPUT_FMT_DATA_PS_YUYV;
+		return 0;
+
+	case DRM_FORMAT_VYUY:
+		*val = SUN4I_FRONTEND_INPUT_FMT_DATA_PS_VYUY;
+		return 0;
+
+	case DRM_FORMAT_YVYU:
+		*val = SUN4I_FRONTEND_INPUT_FMT_DATA_PS_YVYU;
+		return 0;
+
+	case DRM_FORMAT_UYVY:
+		*val = SUN4I_FRONTEND_INPUT_FMT_DATA_PS_UYVY;
+		return 0;
+
+	case DRM_FORMAT_NV16:
+		*val = SUN4I_FRONTEND_INPUT_FMT_DATA_PS_UV;
+		return 0;
+
+	case DRM_FORMAT_NV61:
+		*val = SUN4I_FRONTEND_INPUT_FMT_DATA_PS_VU;
 		return 0;
 
 	default:
@@ -120,12 +286,98 @@ static int sun4i_frontend_drm_format_to_output_fmt(uint32_t fmt, u32 *val)
 {
 	switch (fmt) {
 	case DRM_FORMAT_XRGB8888:
-	case DRM_FORMAT_ARGB8888:
-		*val = 2;
+		*val = SUN4I_FRONTEND_OUTPUT_FMT_DATA_FMT_XRGB8888;
+		return 0;
+
+	case DRM_FORMAT_BGRX8888:
+		*val = SUN4I_FRONTEND_OUTPUT_FMT_DATA_FMT_BGRX8888;
 		return 0;
 
 	default:
 		return -EINVAL;
+	}
+}
+
+static const uint32_t sun4i_frontend_formats[] = {
+	/* RGB */
+	DRM_FORMAT_XRGB8888,
+	DRM_FORMAT_BGRX8888,
+	/* YUV444 */
+	DRM_FORMAT_YUV444,
+	DRM_FORMAT_YVU444,
+	/* YUV422 */
+	DRM_FORMAT_YUYV,
+	DRM_FORMAT_YVYU,
+	DRM_FORMAT_UYVY,
+	DRM_FORMAT_VYUY,
+	DRM_FORMAT_NV16,
+	DRM_FORMAT_NV61,
+	DRM_FORMAT_YUV422,
+	DRM_FORMAT_YVU422,
+	/* YUV420 */
+	DRM_FORMAT_NV12,
+	DRM_FORMAT_NV21,
+	DRM_FORMAT_YUV420,
+	DRM_FORMAT_YVU420,
+	/* YUV411 */
+	DRM_FORMAT_YUV411,
+	DRM_FORMAT_YVU411,
+};
+
+bool sun4i_frontend_format_is_supported(uint32_t fmt, uint64_t modifier)
+{
+	bool found = false;
+	unsigned int i;
+
+	for (i = 0; i < ARRAY_SIZE(sun4i_frontend_formats); i++) {
+		if (sun4i_frontend_formats[i] == fmt) {
+			found = true;
+			break;
+		}
+	}
+
+	if (!found)
+		return false;
+
+	if (modifier == DRM_FORMAT_MOD_ALLWINNER_MB32_TILED)
+		return sun4i_format_supports_tiling(fmt);
+
+	return true;
+}
+
+bool sun4i_frontend_plane_check(struct drm_plane_state *state)
+{
+	struct drm_framebuffer *fb = state->fb;
+	uint32_t format = fb->format->format;
+	uint32_t width = state->src_w >> 16;
+	uint64_t modifier = fb->modifier;
+	bool supported;
+
+	supported = sun4i_frontend_format_is_supported(format, modifier);
+	if (!supported)
+		return false;
+
+	/* Width is required to be even for MB32 tiled format. */
+	if (modifier == DRM_FORMAT_MOD_ALLWINNER_MB32_TILED &&
+	    (width % 2) != 0) {
+		DRM_DEBUG_DRIVER("MB32 tiled format requires an even width\n");
+		return false;
+	}
+
+	return true;
+}
+
+bool sun4i_frontend_format_chroma_requires_swap(uint32_t fmt)
+{
+	switch (fmt) {
+	case DRM_FORMAT_YVU444:
+	case DRM_FORMAT_YVU422:
+	case DRM_FORMAT_YVU420:
+	case DRM_FORMAT_YVU411:
+		return true;
+
+	default:
+		return false;
 	}
 }
 
@@ -134,14 +386,31 @@ int sun4i_frontend_update_formats(struct sun4i_frontend *frontend,
 {
 	struct drm_plane_state *state = plane->state;
 	struct drm_framebuffer *fb = state->fb;
+	uint32_t format = fb->format->format;
 	u32 out_fmt_val;
 	u32 in_fmt_val;
+	u32 in_mod_val;
+	u32 in_ps_val;
+	u32 bypass;
+	unsigned int i;
 	int ret;
 
-	ret = sun4i_frontend_drm_format_to_input_fmt(fb->format->format,
-						     &in_fmt_val);
+	ret = sun4i_frontend_drm_format_to_input_fmt(format, &in_fmt_val);
 	if (ret) {
 		DRM_DEBUG_DRIVER("Invalid input format\n");
+		return ret;
+	}
+
+	ret = sun4i_frontend_drm_format_to_input_mode(format, &in_mod_val,
+						      fb->modifier);
+	if (ret) {
+		DRM_DEBUG_DRIVER("Invalid input mode\n");
+		return ret;
+	}
+
+	ret = sun4i_frontend_drm_format_to_input_sequence(format, &in_ps_val);
+	if (ret) {
+		DRM_DEBUG_DRIVER("Invalid pixel sequence\n");
 		return ret;
 	}
 
@@ -155,17 +424,38 @@ int sun4i_frontend_update_formats(struct sun4i_frontend *frontend,
 	 * I have no idea what this does exactly, but it seems to be
 	 * related to the scaler FIR filter phase parameters.
 	 */
-	regmap_write(frontend->regs, SUN4I_FRONTEND_CH0_HORZPHASE_REG, 0x400);
-	regmap_write(frontend->regs, SUN4I_FRONTEND_CH1_HORZPHASE_REG, 0x400);
-	regmap_write(frontend->regs, SUN4I_FRONTEND_CH0_VERTPHASE0_REG, 0x400);
-	regmap_write(frontend->regs, SUN4I_FRONTEND_CH1_VERTPHASE0_REG, 0x400);
-	regmap_write(frontend->regs, SUN4I_FRONTEND_CH0_VERTPHASE1_REG, 0x400);
-	regmap_write(frontend->regs, SUN4I_FRONTEND_CH1_VERTPHASE1_REG, 0x400);
+	regmap_write(frontend->regs, SUN4I_FRONTEND_CH0_HORZPHASE_REG,
+		     frontend->data->ch_phase[0].horzphase);
+	regmap_write(frontend->regs, SUN4I_FRONTEND_CH1_HORZPHASE_REG,
+		     frontend->data->ch_phase[1].horzphase);
+	regmap_write(frontend->regs, SUN4I_FRONTEND_CH0_VERTPHASE0_REG,
+		     frontend->data->ch_phase[0].vertphase[0]);
+	regmap_write(frontend->regs, SUN4I_FRONTEND_CH1_VERTPHASE0_REG,
+		     frontend->data->ch_phase[1].vertphase[0]);
+	regmap_write(frontend->regs, SUN4I_FRONTEND_CH0_VERTPHASE1_REG,
+		     frontend->data->ch_phase[0].vertphase[1]);
+	regmap_write(frontend->regs, SUN4I_FRONTEND_CH1_VERTPHASE1_REG,
+		     frontend->data->ch_phase[1].vertphase[1]);
+
+	if (sun4i_format_is_yuv(format) &&
+	    !sun4i_format_is_yuv(out_fmt)) {
+		/* Setup the CSC engine for YUV to RGB conversion. */
+
+		for (i = 0; i < ARRAY_SIZE(sunxi_bt601_yuv2rgb_coef); i++)
+			regmap_write(frontend->regs,
+				     SUN4I_FRONTEND_CSC_COEF_REG(i),
+				     sunxi_bt601_yuv2rgb_coef[i]);
+
+		bypass = 0;
+	} else {
+		bypass = SUN4I_FRONTEND_BYPASS_CSC_EN;
+	}
+
+	regmap_update_bits(frontend->regs, SUN4I_FRONTEND_BYPASS_REG,
+			   SUN4I_FRONTEND_BYPASS_CSC_EN, bypass);
 
 	regmap_write(frontend->regs, SUN4I_FRONTEND_INPUT_FMT_REG,
-		     SUN4I_FRONTEND_INPUT_FMT_DATA_MOD(1) |
-		     SUN4I_FRONTEND_INPUT_FMT_DATA_FMT(in_fmt_val) |
-		     SUN4I_FRONTEND_INPUT_FMT_PS(1));
+		     in_mod_val | in_fmt_val | in_ps_val);
 
 	/*
 	 * TODO: It look like the A31 and A80 at least will need the
@@ -173,7 +463,7 @@ int sun4i_frontend_update_formats(struct sun4i_frontend *frontend,
 	 * ARGB8888).
 	 */
 	regmap_write(frontend->regs, SUN4I_FRONTEND_OUTPUT_FMT_REG,
-		     SUN4I_FRONTEND_OUTPUT_FMT_DATA_FMT(out_fmt_val));
+		     out_fmt_val);
 
 	return 0;
 }
@@ -183,31 +473,48 @@ void sun4i_frontend_update_coord(struct sun4i_frontend *frontend,
 				 struct drm_plane *plane)
 {
 	struct drm_plane_state *state = plane->state;
+	struct drm_framebuffer *fb = state->fb;
+	uint32_t format = fb->format->format;
+	uint32_t luma_width, luma_height;
+	uint32_t chroma_width, chroma_height;
 
 	/* Set height and width */
-	DRM_DEBUG_DRIVER("Frontend size W: %u H: %u\n",
+	DRM_DEBUG_DRIVER("Frontend crtc size W: %u H: %u\n",
 			 state->crtc_w, state->crtc_h);
+
+	luma_width = chroma_width = state->src_w >> 16;
+	luma_height = chroma_height = state->src_h >> 16;
+
+	if (sun4i_format_is_yuv411(format)) {
+		chroma_width = DIV_ROUND_UP(luma_width, 4);
+	} else if (sun4i_format_is_yuv420(format)) {
+		chroma_width = DIV_ROUND_UP(luma_width, 2);
+		chroma_height = DIV_ROUND_UP(luma_height, 2);
+	} else if (sun4i_format_is_yuv422(format)) {
+		chroma_width = DIV_ROUND_UP(luma_width, 2);
+	}
+
 	regmap_write(frontend->regs, SUN4I_FRONTEND_CH0_INSIZE_REG,
-		     SUN4I_FRONTEND_INSIZE(state->src_h >> 16,
-					   state->src_w >> 16));
-	regmap_write(frontend->regs, SUN4I_FRONTEND_CH1_INSIZE_REG,
-		     SUN4I_FRONTEND_INSIZE(state->src_h >> 16,
-					   state->src_w >> 16));
-
+		     SUN4I_FRONTEND_INSIZE(luma_height, luma_width - 1));
 	regmap_write(frontend->regs, SUN4I_FRONTEND_CH0_OUTSIZE_REG,
-		     SUN4I_FRONTEND_OUTSIZE(state->crtc_h, state->crtc_w));
-	regmap_write(frontend->regs, SUN4I_FRONTEND_CH1_OUTSIZE_REG,
-		     SUN4I_FRONTEND_OUTSIZE(state->crtc_h, state->crtc_w));
-
+		     SUN4I_FRONTEND_OUTSIZE(state->crtc_h - 1,
+					    state->crtc_w - 1));
 	regmap_write(frontend->regs, SUN4I_FRONTEND_CH0_HORZFACT_REG,
-		     state->src_w / state->crtc_w);
-	regmap_write(frontend->regs, SUN4I_FRONTEND_CH1_HORZFACT_REG,
-		     state->src_w / state->crtc_w);
-
+		     (luma_width << 16) / state->crtc_w);
 	regmap_write(frontend->regs, SUN4I_FRONTEND_CH0_VERTFACT_REG,
-		     state->src_h / state->crtc_h);
+		     (luma_height << 16) / state->crtc_h);
+
+	/* These also have to be specified, even for interleaved formats. */
+	regmap_write(frontend->regs, SUN4I_FRONTEND_CH1_INSIZE_REG,
+		     SUN4I_FRONTEND_INSIZE(chroma_height - 1,
+					   chroma_width - 1));
+	regmap_write(frontend->regs, SUN4I_FRONTEND_CH1_OUTSIZE_REG,
+		     SUN4I_FRONTEND_OUTSIZE(state->crtc_h - 1,
+					    state->crtc_w - 1));
+	regmap_write(frontend->regs, SUN4I_FRONTEND_CH1_HORZFACT_REG,
+		     (chroma_width << 16) / state->crtc_w);
 	regmap_write(frontend->regs, SUN4I_FRONTEND_CH1_VERTFACT_REG,
-		     state->src_h / state->crtc_h);
+		     (chroma_height << 16) / state->crtc_h);
 
 	regmap_write_bits(frontend->regs, SUN4I_FRONTEND_FRM_CTRL_REG,
 			  SUN4I_FRONTEND_FRM_CTRL_REG_RDY,
@@ -249,6 +556,10 @@ static int sun4i_frontend_bind(struct device *dev, struct device *master,
 	dev_set_drvdata(dev, frontend);
 	frontend->dev = dev;
 	frontend->node = dev->of_node;
+
+	frontend->data = of_device_get_match_data(dev);
+	if (!frontend->data)
+		return -ENODEV;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	regs = devm_ioremap_resource(dev, res);
@@ -339,10 +650,6 @@ static int sun4i_frontend_runtime_resume(struct device *dev)
 			   SUN4I_FRONTEND_EN_EN,
 			   SUN4I_FRONTEND_EN_EN);
 
-	regmap_update_bits(frontend->regs, SUN4I_FRONTEND_BYPASS_REG,
-			   SUN4I_FRONTEND_BYPASS_CSC_EN,
-			   SUN4I_FRONTEND_BYPASS_CSC_EN);
-
 	sun4i_frontend_scaler_init(frontend);
 
 	return 0;
@@ -366,8 +673,43 @@ static const struct dev_pm_ops sun4i_frontend_pm_ops = {
 	.runtime_suspend	= sun4i_frontend_runtime_suspend,
 };
 
+static const struct sun4i_frontend_data sun7i_a20_frontend = {
+	.ch_phase		= {
+		{
+			.horzphase = 0,
+			.vertphase = { 0, 0 },
+		},
+		{
+			.horzphase = 0xfc000,
+			.vertphase = { 0xfc000, 0xfc000 },
+		},
+	},
+	.has_coef_rdy_bit	= true,
+};
+
+static const struct sun4i_frontend_data sun8i_a33_frontend = {
+	.ch_phase		= {
+		{
+			.horzphase = 0x400,
+			.vertphase = { 0x400, 0x400 },
+		},
+		{
+			.horzphase = 0x400,
+			.vertphase = { 0x400, 0x400 },
+		},
+	},
+	.has_access_ctrl	= true,
+};
+
 const struct of_device_id sun4i_frontend_of_table[] = {
-	{ .compatible = "allwinner,sun8i-a33-display-frontend" },
+	{
+		.compatible = "allwinner,sun7i-a20-display-frontend",
+		.data = &sun7i_a20_frontend
+	},
+	{
+		.compatible = "allwinner,sun8i-a33-display-frontend",
+		.data = &sun8i_a33_frontend
+	},
 	{ }
 };
 EXPORT_SYMBOL(sun4i_frontend_of_table);

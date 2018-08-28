@@ -167,7 +167,6 @@
 #define SUN4I_BACKEND_PIPE_OFF(p)		(0x5000 + (0x400 * (p)))
 
 #define SUN4I_BACKEND_NUM_LAYERS		4
-#define SUN4I_BACKEND_NUM_ALPHA_LAYERS		1
 #define SUN4I_BACKEND_NUM_FRONTEND_LAYERS	1
 #define SUN4I_BACKEND_NUM_YUV_PLANES		1
 
@@ -187,6 +186,8 @@ struct sun4i_backend {
 	/* Protects against races in the frontend teardown */
 	spinlock_t		frontend_lock;
 	bool			frontend_teardown;
+
+	const struct sun4i_backend_quirks	*quirks;
 };
 
 static inline struct sun4i_backend *
@@ -204,8 +205,12 @@ int sun4i_backend_update_layer_formats(struct sun4i_backend *backend,
 int sun4i_backend_update_layer_buffer(struct sun4i_backend *backend,
 				      int layer, struct drm_plane *plane);
 int sun4i_backend_update_layer_frontend(struct sun4i_backend *backend,
-					int layer, uint32_t in_fmt);
+					int layer, struct drm_plane *plane,
+					uint32_t fmt);
 int sun4i_backend_update_layer_zpos(struct sun4i_backend *backend,
 				    int layer, struct drm_plane *plane);
+void sun4i_backend_disable_layer_frontend(struct sun4i_backend *backend,
+					  int layer);
+bool sun4i_backend_format_is_supported(uint32_t fmt, uint64_t modifier);
 
 #endif /* _SUN4I_BACKEND_H_ */
