@@ -70,6 +70,24 @@ static const struct cedrus_control cedrus_controls[] = {
 		.codec		= CEDRUS_CODEC_H264,
 		.required	= true,
 	},
+	{
+		.id		= V4L2_CID_MPEG_VIDEO_HEVC_SPS,
+		.elem_size	= sizeof(struct v4l2_ctrl_hevc_sps),
+		.codec		= CEDRUS_CODEC_H265,
+		.required	= true,
+	},
+	{
+		.id		= V4L2_CID_MPEG_VIDEO_HEVC_PPS,
+		.elem_size	= sizeof(struct v4l2_ctrl_hevc_pps),
+		.codec		= CEDRUS_CODEC_H265,
+		.required	= true,
+	},
+	{
+		.id		= V4L2_CID_MPEG_VIDEO_HEVC_SLICE_PARAMS,
+		.elem_size	= sizeof(struct v4l2_ctrl_hevc_slice_params),
+		.codec		= CEDRUS_CODEC_H265,
+		.required	= true,
+	},
 };
 
 #define CEDRUS_CONTROLS_COUNT	ARRAY_SIZE(cedrus_controls)
@@ -308,6 +326,7 @@ static int cedrus_probe(struct platform_device *pdev)
 
 	dev->dec_ops[CEDRUS_CODEC_MPEG2] = &cedrus_dec_ops_mpeg2;
 	dev->dec_ops[CEDRUS_CODEC_H264] = &cedrus_dec_ops_h264;
+	dev->dec_ops[CEDRUS_CODEC_H265] = &cedrus_dec_ops_h265;
 
 	mutex_init(&dev->dev_mutex);
 	spin_lock_init(&dev->irq_lock);
