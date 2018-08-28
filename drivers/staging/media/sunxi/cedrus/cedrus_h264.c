@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 /*
+ * Cedrus VPU driver
+ *
  * Copyright (c) 2013 Jens Kuske <jenskuske@gmail.com>
  * Copyright (c) 2018 Bootlin
  */
