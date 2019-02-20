@@ -23,10 +23,11 @@
 #include <media/media-request.h>
 
 /*
- * Include the mpeg2 stateless codec compound control definitions.
+ * Include the stateless codec compound control definitions.
  * This will move to the public headers once this API is fully stable.
  */
 #include <media/mpeg2-ctrls.h>
+#include <media/h264-ctrls.h>
 
 /* forward references */
 struct file;
@@ -49,6 +50,11 @@ struct poll_table_struct;
  * @p_char:			Pointer to a string.
  * @p_mpeg2_slice_params:	Pointer to a MPEG2 slice parameters structure.
  * @p_mpeg2_quantization:	Pointer to a MPEG2 quantization data structure.
+ * @p_h264_sps:			Pointer to a struct v4l2_ctrl_h264_sps.
+ * @p_h264_pps:			Pointer to a struct v4l2_ctrl_h264_pps.
+ * @p_h264_scaling_matrix:	Pointer to a struct v4l2_ctrl_h264_scaling_matrix.
+ * @p_h264_slice_param:		Pointer to a struct v4l2_ctrl_h264_slice_param.
+ * @p_h264_decode_param:	Pointer to a struct v4l2_ctrl_h264_decode_param.
  * @p:				Pointer to a compound value.
  */
 union v4l2_ctrl_ptr {
@@ -60,6 +66,11 @@ union v4l2_ctrl_ptr {
 	char *p_char;
 	struct v4l2_ctrl_mpeg2_slice_params *p_mpeg2_slice_params;
 	struct v4l2_ctrl_mpeg2_quantization *p_mpeg2_quantization;
+	struct v4l2_ctrl_h264_sps *p_h264_sps;
+	struct v4l2_ctrl_h264_pps *p_h264_pps;
+	struct v4l2_ctrl_h264_scaling_matrix *p_h264_scaling_matrix;
+	struct v4l2_ctrl_h264_slice_param *p_h264_slice_param;
+	struct v4l2_ctrl_h264_decode_param *p_h264_decode_param;
 	void *p;
 };
 
